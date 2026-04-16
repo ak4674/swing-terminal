@@ -605,8 +605,28 @@ class ScanParams(BaseModel):
     volume_confirmed: bool = False
 
 
+@app.get("/api/debug")
+async def debug():
+    """Returns first cached stock raw — for diagnosing crashes."""
+    stocks = get_cache()
+    if not stocks:
+        return {"ok": False, "msg": "Cache empty"}
+    import traceback
+    s = stocks[0]
+    try:
+        sid = "mom"
+        meta = STRATEGY_META[sid]
+        score = s["scores"].get(sid, 0)
+        levels = calc_levels(s["price"], sid)
+        reasoning = build_reasoning(s, sid)
+        return {"ok": True, "stock": s, "score": score, "levels": levels, "reasoning": reasoning}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "trace": traceback.format_exc(), "stock": s}
+
+
 @app.post("/api/scan")
 async def scan(params: ScanParams):
+    import traceback
     if params.strategy not in STRATEGY_IDS:
         raise HTTPException(400, f"Unknown strategy: {params.strategy}")
     # Wait up to 25s for first build
@@ -622,20 +642,25 @@ async def scan(params: ScanParams):
 
     meta = STRATEGY_META[params.strategy]
     results = []
-    for s in stocks:
-        score = s["scores"].get(params.strategy, 0)
-        if score < max(params.min_score, 35): continue
-        if params.cap != "any" and s["cap"] != params.cap: continue
-        if params.sector != "any" and s["sector"] != params.sector: continue
-        if params.min_rr > 0 and meta["rr"] < params.min_rr: continue
-        if params.trend != "any" and s["trend"] != params.trend: continue
-        if params.volume_confirmed and s["vol_ratio"] < 1.3: continue
-        results.append({**s, "fit_score": score, "strategy_meta": meta,
-                        "levels": calc_levels(s["price"], params.strategy),
-                        "reasoning": build_reasoning(s, params.strategy)})
-    results.sort(key=lambda x: x["fit_score"], reverse=True)
-    return {"strategy": params.strategy, "count": len(results),
-            "total_analyzed": len(stocks), "results": results[:30]}
+    try:
+        for s in stocks:
+            score = s["scores"].get(params.strategy, 0)
+            if score < max(params.min_score, 20): continue
+            if params.cap != "any" and s["cap"] != params.cap: continue
+            if params.sector != "any" and s["sector"] != params.sector: continue
+            if params.min_rr > 0 and meta["rr"] < params.min_rr: continue
+            if params.trend != "any" and s["trend"] != params.trend: continue
+            if params.volume_confirmed and s["vol_ratio"] < 1.3: continue
+            results.append({**s, "fit_score": score, "strategy_meta": meta,
+                            "levels": calc_levels(s["price"], params.strategy),
+                            "reasoning": build_reasoning(s, params.strategy)})
+        results.sort(key=lambda x: x["fit_score"], reverse=True)
+        return {"strategy": params.strategy, "count": len(results),
+                "total_analyzed": len(stocks), "results": results[:30]}
+    except Exception as e:
+        tb = traceback.format_exc()
+        log.error(f"Scan crash: {e}\n{tb}")
+        raise HTTPException(500, detail=f"Scan error: {str(e)} | Traceback: {tb[:500]}
 
 
 if __name__ == "__main__":
