@@ -6,242 +6,378 @@
 <title>SWING // Live NSE Pattern Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0a0a0b; --bg-elev:#111113; --bg-card:#16161a; --bg-hover:#1c1c22;
-    --border:#26262d; --border-bright:#3a3a44;
-    --text:#e8e8ea; --text-dim:#8a8a95; --text-faint:#55555e;
-    --accent:#d4ff3a; --accent-dim:#8fae28;
-    --green:#22c55e; --red:#ef4444; --amber:#f59e0b; --blue:#60a5fa;
+  :root {
+    --bg: #050506;
+    --panel: #0d0d11;
+    --panel-hover: #121218;
+    --border: #1a1a22;
+    --border-bright: #2d2d3a;
+    --accent: #d4ff3a;
+    --accent-glow: rgba(212, 255, 58, 0.2);
+    --text: #ffffff;
+    --text-dim: #8a8a95;
+    --text-faint: #4a4a55;
+    --green: #00ff88;
+    --red: #ff3366;
+    --blue: #00d9ff;
+    --gold: #ffcc00;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{background:var(--bg);color:var(--text);font-family:'Inter Tight',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-  body{
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212,255,58,0.06), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(96,165,250,0.04), transparent 60%);
-    min-height:100vh;padding:24px;
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+    padding: clamp(16px, 4vw, 40px);
   }
-  body::before{
-    content:'';position:fixed;inset:0;pointer-events:none;z-index:1;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-    background-size:48px 48px;
-    mask-image:radial-gradient(ellipse at center, black 40%, transparent 80%);
+
+  /* --- Sci-Fi Grid Background --- */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1;
+    background-image: 
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 90%);
+    opacity: 0.3;
   }
-  .wrap{max-width:1480px;margin:0 auto;position:relative;z-index:2}
 
-  header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:16px}
-  .brand{display:flex;align-items:baseline;gap:14px}
-  .logo{font-family:'Fraunces',serif;font-weight:900;font-size:42px;letter-spacing:-0.04em;line-height:1;color:var(--text);position:relative}
-  .logo::after{content:'â—';color:var(--accent);font-size:14px;position:absolute;top:4px;margin-left:6px;animation:pulse 2s ease-in-out infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-  .sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.18em}
-  .meta{display:flex;gap:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em}
-  .meta b{color:var(--accent);font-weight:600}
-  .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite}
+  /* --- Global Scanline Animation --- */
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  body::after {
+    content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+    z-index: 9999; pointer-events: none;
+    animation: scanline 8s linear infinite;
+    opacity: 0.5;
+  }
 
-  .control-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:24px;box-shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 20px 40px -20px rgba(0,0,0,.6)}
-  .panel-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.25em;margin-bottom:14px;display:flex;align-items:center;gap:10px}
-  .panel-title::before{content:'';width:24px;height:1px;background:var(--accent)}
-  .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-  .ctrl label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px}
-  select,input{width:100%;background:var(--bg-elev);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;padding:11px 14px;border-radius:8px;outline:none;transition:all .2s ease;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a8a95' d='M6 8L2 4h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
-  select:hover{border-color:var(--border-bright)}
-  select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(212,255,58,0.1)}
+  .container { max-width: 1600px; margin: 0 auto; position: relative; }
 
-  .search-row{display:flex;gap:12px;margin-top:18px;align-items:center;flex-wrap:wrap}
-  .btn{background:var(--accent);color:#0a0a0b;border:none;padding:13px 28px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all .2s ease;display:inline-flex;align-items:center;gap:10px}
-  .btn:hover{background:#e6ff5a;transform:translateY(-1px);box-shadow:0 8px 20px -8px rgba(212,255,58,0.5)}
-  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-  .btn.ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
-  .btn.ghost:hover{background:var(--bg-hover);color:var(--text);border-color:var(--border-bright);transform:none;box-shadow:none}
-  .result-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-left:auto}
-  .result-count b{color:var(--accent)}
+  /* --- Header --- */
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 40px; padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 24px;
+  }
+  .brand-block { display: flex; flex-direction: column; gap: 4px; }
+  .logo {
+    font-size: 32px; font-weight: 800; letter-spacing: -0.04em;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon { width: 32px; height: 32px; background: var(--accent); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+  .tagline { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.3em; }
+  
+  .status-hub {
+    display: flex; gap: 32px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--panel); padding: 12px 24px; border-radius: 100px; border: 1px solid var(--border);
+  }
+  .status-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
+  .status-item b { color: var(--text); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
+  .dot.active { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
-  .strategies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:24px}
-  .strat{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
-  .strat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg, var(--accent), transparent);opacity:0;transition:opacity .2s}
-  .strat:hover{border-color:var(--border-bright);background:var(--bg-hover)}
-  .strat.active{border-color:var(--accent);background:linear-gradient(180deg, rgba(212,255,58,0.05), var(--bg-card))}
-  .strat.active::before{opacity:1}
-  .strat-rank{font-family:'Fraunces',serif;font-size:11px;color:var(--text-faint);letter-spacing:0.2em}
-  .strat-name{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin:4px 0 10px;letter-spacing:-0.01em}
-  .strat-stats{display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em}
-  .strat-stats span b{color:var(--green);font-weight:600}
-  .strat-stats .avg b{color:var(--accent)}
+  /* --- Control Grid --- */
+  .dashboard {
+    display: grid; grid-template-columns: 320px 1fr; gap: 24px; margin-bottom: 40px;
+    align-items: start;
+  }
 
-  .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
-  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .25s ease;position:relative;display:flex;flex-direction:column;animation:fadeUp .5s ease both}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--green));transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
-  .card:hover{border-color:var(--border-bright);transform:translateY(-2px);box-shadow:0 20px 40px -20px rgba(0,0,0,0.5)}
-  .card:hover::before{transform:scaleX(1)}
+  /* --- Sidebar Strategies --- */
+  .strategy-col { display: flex; flex-direction: column; gap: 12px; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  .card-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-  .ticker{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;letter-spacing:0.02em}
-  .company{font-size:12px;color:var(--text-dim);margin-top:3px;font-weight:400}
-  .price-block{text-align:right}
-  .price{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px}
-  .change{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-top:2px}
-  .change.up{color:var(--green)}
-  .change.down{color:var(--red)}
+  .strat-card {
+    background: var(--panel); border: 1px solid var(--border); padding: 16px; border-radius: 12px;
+    cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; overflow: hidden;
+  }
+  .strat-card:hover { border-color: var(--border-bright); background: var(--panel-hover); transform: translateX(4px); }
+  .strat-card.active { border-color: var(--accent); background: var(--accent-glow); }
+  .strat-card .id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
+  .strat-card .name { font-size: 18px; font-weight: 700; margin: 4px 0 8px; letter-spacing: -0.01em; }
+  .strat-metrics { display: flex; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .strat-metrics b { color: var(--text); }
 
-  .pattern-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,255,58,0.1);color:var(--accent);border:1px solid rgba(212,255,58,0.3);padding:4px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:14px 20px 0;align-self:flex-start}
-  .pattern-badge::before{content:'â—†';font-size:8px}
+  /* --- Main Filter Panel --- */
+  .filter-panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; position: relative; display: flex; flex-direction: column; gap: 24px;
+    box-shadow: 0 20px 50px -20px rgba(0,0,0,0.5);
+  }
+  .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
+  
+  .field { display: flex; flex-direction: column; gap: 8px; }
+  .field label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.2em; }
+  
+  select {
+    background: #14141a; border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    padding: 12px 16px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500;
+    outline: none; cursor: pointer; transition: all 0.2s;
+  }
+  select:hover { border-color: var(--border-bright); }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); }
 
-  .card-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-  .metric{background:var(--bg-card);padding:12px;text-align:center}
-  .metric-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
-  .metric-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
-  .metric-value.green{color:var(--green)}
-  .metric-value.red{color:var(--red)}
-  .metric-value.accent{color:var(--accent)}
+  .action-bar { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); pt: 24px; padding-top: 24px; }
+  
+  .run-btn {
+    background: var(--accent); color: #000; padding: 14px 40px; border-radius: 100px;
+    font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;
+    border: none; transition: all 0.3s; display: flex; align-items: center; gap: 12px;
+    position: relative; overflow: hidden;
+  }
+  .run-btn:hover { transform: scale(1.02); box-shadow: 0 0 30px var(--accent-glow); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+  .run-btn .icon { font-size: 18px; }
+  
+  .reset-btn {
+    background: transparent; color: var(--text-dim); padding: 12px 24px; border-radius: 100px;
+    border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover { color: #fff; border-color: var(--text-faint); background: rgba(255,255,255,0.05); }
 
-  .reasoning{padding:14px 20px 18px}
-  .reasoning-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.2em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-  .reasoning-title::before{content:'';width:14px;height:1px;background:var(--accent)}
-  .reasoning-list{list-style:none}
-  .reasoning-list li{font-size:12.5px;line-height:1.55;color:var(--text);padding:5px 0 5px 18px;position:relative}
-  .reasoning-list li::before{content:'â†’';position:absolute;left:0;color:var(--accent);font-weight:600}
-  .reasoning-list li b{color:var(--accent);font-weight:600}
+  .scan-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.1em; }
+  .scan-info b { color: var(--accent); }
 
-  .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 20px 18px;border-top:1px solid var(--border);background:var(--bg-elev)}
-  .level{text-align:center}
-  .level-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
-  .level-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
-  .level-value.entry{color:var(--blue)}
-  .level-value.target{color:var(--green)}
-  .level-value.stop{color:var(--red)}
+  /* --- Results Cards --- */
+  #results {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 24px;
+    perspective: 1000px;
+  }
+  
+  .card {
+    background: rgba(20, 20, 26, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex; flex-direction: column; gap: 20px;
+    animation: cardEntry 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes cardEntry { from { opacity: 0; transform: translateY(30px) rotateX(-5deg); filter: blur(10px); } to { opacity: 1; transform: translateY(0); filter: none; } }
+  
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8), 0 0 20px var(--accent-glow);
+    z-index: 10;
+  }
 
-  .score-row{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg-elev);border-top:1px solid var(--border)}
-  .score-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.15em}
-  .score-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
-  .score-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .8s ease}
-  .score-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:var(--accent)}
+  .card-top { display: flex; justify-content: space-between; align-items: start; }
+  .ticker-box { display: flex; flex-direction: column; gap: 4px; }
+  .sym { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+  .comp { font-size: 12px; color: var(--text-dim); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  .val-box { text-align: right; }
+  .cur-price { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; }
+  .cur-chg { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; margin-top: 4px; }
+  .cur-chg.pos { color: var(--green); }
+  .cur-chg.neg { color: var(--red); }
 
-  .empty,.loading,.error{grid-column:1/-1;text-align:center;padding:80px 20px;border:1px dashed var(--border);border-radius:14px}
-  .empty-icon{font-family:'Fraunces',serif;font-size:72px;font-weight:900;color:var(--text-faint);line-height:1;margin-bottom:16px}
-  .empty-title{font-family:'Fraunces',serif;font-size:22px;color:var(--text);margin-bottom:8px}
-  .empty p{font-size:13px;max-width:420px;margin:0 auto;line-height:1.6;color:var(--text-dim)}
-  .error{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.05)}
-  .error .empty-icon{color:var(--red)}
-  .spinner{display:inline-block;width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .loading-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.2em;margin-top:16px}
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 100px;
+    font-size: 9px; font-weight: 700; border: 1px solid var(--border); color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .badge.strat { background: var(--accent-glow); border-color: rgba(212,255,58,0.2); color: var(--accent); }
+  .badge.sector { color: var(--blue); }
 
-  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.15em;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-  footer b{color:var(--amber)}
+  .metric-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px solid var(--border);
+  }
+  .met-item { display: flex; flex-direction: column; gap: 4px; }
+  .met-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; }
+  .met-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); }
+  .met-val.hi { color: var(--green); }
+  .met-val.lo { color: var(--red); }
 
-  @media (max-width:720px){body{padding:14px}.logo{font-size:30px}.card-metrics{grid-template-columns:repeat(2,1fr)}}
+  .analyst-box { background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border-left: 2px solid var(--accent); }
+  .analyst-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); text-transform: uppercase; mb: 8px; margin-bottom: 8px; }
+  .reasoning-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .reasoning-list li { font-size: 12px; line-height: 1.4; color: var(--text-dim); display: flex; gap: 8px; align-items: start; }
+  .reasoning-list li::before { content: '>'; color: var(--accent); font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+  .trade-footer { 
+    margin-top: auto; padding-top: 16px; border-top: 1px dashed var(--border); 
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .trade-item { display: flex; flex-direction: column; gap: 4px; }
+  .trade-label { font-size: 8px; color: var(--text-faint); text-transform: uppercase; font-weight: 700; }
+  .trade-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; }
+  .trade-val.entry { color: var(--blue); }
+  .trade-val.target { color: var(--green); }
+  .trade-val.stop { color: var(--red); }
+
+  .vitals-bar { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+  .v-track { flex: 1; height: 3px; background: #000; border-radius: 10px; overflow: hidden; }
+  .v-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 1s ease; }
+  .v-score { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--accent); }
+
+  /* --- States --- */
+  .empty-state {
+    grid-column: 1 / -1; min-height: 400px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; gap: 20px;
+    border: 2px dashed var(--border); border-radius: 30px; background: rgba(255,255,255,0.01);
+  }
+  .empty-icon { font-size: 64px; opacity: 0.1; }
+  .empty-text { font-size: 18px; color: var(--text-dim); max-width: 400px; }
+  
+  .loading-state { grid-column: 1 / -1; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+  .orbit {
+    width: 60px; height: 60px; position: relative;
+    border: 2px solid var(--border); border-radius: 50%;
+    animation: spin 2s linear infinite;
+  }
+  .orbit::after { content: ''; position: absolute; top: 0; left: 50%; translate: -50% -50%; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 15px var(--accent); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- Footer --- */
+  footer {
+    border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;
+    display: flex; justify-content: space-between; align-items: start; color: var(--text-faint);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; line-height: 2;
+  }
+  footer b { color: var(--text-dim); }
+
+  /* --- Adaptive --- */
+  @media (max-width: 1024px) {
+    .dashboard { grid-template-columns: 1fr; }
+    .strategy-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  }
+  @media (max-width: 600px) {
+    .container { padding: 0 10px; }
+    header { gap: 12px; }
+    .results { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
 
+<div class="container">
+  
   <header>
-    <div>
-      <div class="brand">
-        <div class="logo">SWING</div>
-        <div class="sub">Live NSE Pattern Terminal</div>
+    <div class="brand-block">
+      <div class="logo">
+        <div class="logo-icon"></div>
+        SWING
       </div>
-      <div class="sub" style="margin-top:10px;opacity:.6">Real-time scans Â· Cup/Handle Â· Double Bottom Â· IPO Base Â· Momentum Â· Flat Base</div>
+      <div class="tagline">Neural Pattern Extraction Terminal</div>
     </div>
-    <div class="meta">
-      <span><span class="live-dot"></span>Market <b id="marketStatus">â€”</b></span>
-      <span>API <b id="apiStatus">CHECKING</b></span>
-      <span>IST <b id="clock">â€”</b></span>
+    <div class="status-hub">
+      <div class="status-item"><div class="dot active" id="dotM"></div>Market: <b id="marketStatus">...</b></div>
+      <div class="status-item"><div class="dot active" id="dotA"></div>Core: <b id="coreStatus">Syncing</b></div>
+      <div class="status-item">Cycle: <b id="clock">00:00:00</b></div>
     </div>
   </header>
 
-  <div class="control-panel">
-    <div class="panel-title">01 Â· Select Strategy</div>
-    <div class="strategies" id="strategies">
-      <div style="grid-column:1/-1;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px;padding:20px 0;text-align:center">Loading strategiesâ€¦</div>
+  <div class="dashboard">
+    <div class="strategy-col">
+      <div class="section-label">Heuristic Profiles</div>
+      <div id="strategyList">
+        <!-- Strats go here -->
+        <div style="color:var(--text-faint); font-family: 'JetBrains Mono', monospace; font-size: 11px;">Initializing...</div>
+      </div>
+    </div>
+
+    <div class="filter-panel">
+      <div class="section-label">Config · Filter & Optimization</div>
+      <div class="filter-grid">
+        <div class="field">
+          <label>Market Universe</label>
+          <select id="fCap">
+            <option value="any">Global Universe</option>
+            <option value="large">Institutional (Large)</option>
+            <option value="mid">Growth Tier (Mid)</option>
+            <option value="small">Speculative (Small)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sector Segment</label>
+          <select id="fSector">
+            <option value="any">All Channels</option>
+            <option>Information Technology</option>
+            <option>Banking & Financials</option>
+            <option>Pharmaceuticals</option>
+            <option>Auto & Ancillaries</option>
+            <option>FMCG</option>
+            <option>Energy</option>
+            <option>Metals</option>
+            <option>Consumer Durables</option>
+            <option>Capital Goods</option>
+            <option>Chemicals</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Intelligence Grade</label>
+          <select id="fScore">
+            <option value="0">Basic (+40 Score)</option>
+            <option value="60">Validated (+60 Score)</option>
+            <option value="70">High Fit (+70 Score)</option>
+            <option value="80">Elite Optima (+80 Score)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Trend Orientation</label>
+          <select id="fTrend">
+            <option value="any">Biaxial</option>
+            <option value="bullish">Bullish Vector</option>
+            <option value="neutral">Horizontal</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <div class="scan-info" id="scanInfo">Ready for <b>Pattern Extraction</b></div>
+        <div style="display:flex; gap:16px;">
+          <button class="reset-btn" id="resetBtn">System Reset</button>
+          <button class="run-btn" id="runBtn" disabled>
+            <span class="icon">⚡</span>
+            Execute Live Scan
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="control-panel">
-    <div class="panel-title">02 Â· Filter & Screen</div>
-    <div class="controls">
-      <div class="ctrl">
-        <label>Market Cap</label>
-        <select id="fCap">
-          <option value="any">Any</option>
-          <option value="large">Large Cap</option>
-          <option value="mid">Mid Cap</option>
-          <option value="small">Small Cap</option>
-        </select>
-      </div>
-      <div class="ctrl">
-        <label>Sector</label>
-        <select id="fSector">
-          <option value="any">All Sectors</option>
-          <option>Information Technology</option>
-          <option>Banking & Financials</option>
-          <option>Pharmaceuticals</option>
-          <option>Auto & Ancillaries</option>
-          <option>FMCG</option>
-          <option>Energy</option>
-          <option>Metals</option>
-          <option>Consumer Durables</option>
-          <option>Capital Goods</option>
-          <option>Chemicals</option>
-        </select>
-      </div>
-      <div class="ctrl">
-        <label>Min. Fit Score</label>
-        <select id="fScore">
-          <option value="0">Any (40+)</option>
-          <option value="60">Good (60+)</option>
-          <option value="70">High (70+)</option>
-          <option value="80">Elite (80+)</option>
-        </select>
-      </div>
-      <div class="ctrl">
-        <label>Risk / Reward</label>
-        <select id="fRR">
-          <option value="0">Any</option>
-          <option value="2">â‰¥ 2.0Ã—</option>
-          <option value="2.5">â‰¥ 2.5Ã—</option>
-        </select>
-      </div>
-      <div class="ctrl">
-        <label>Trend</label>
-        <select id="fTrend">
-          <option value="any">Any</option>
-          <option value="bullish">Bullish</option>
-          <option value="neutral">Neutral</option>
-        </select>
-      </div>
-      <div class="ctrl">
-        <label>Volume Confirmation</label>
-        <select id="fVol">
-          <option value="false">Any</option>
-          <option value="true">Spike â‰¥1.5Ã—</option>
-        </select>
-      </div>
-    </div>
-    <div class="search-row">
-      <button class="btn" id="searchBtn">â–¶ Run Live Scan</button>
-      <button class="btn ghost" id="resetBtn">â†º Reset</button>
-      <div class="result-count" id="resultCount">Select a strategy Â· Click Run Scan</div>
-    </div>
-  </div>
-
+  <div class="section-label" style="margin-bottom:24px;">Extracted Entities</div>
   <div class="results" id="results">
-    <div class="empty">
-      <div class="empty-icon">â—ˆ</div>
-      <div class="empty-title">Ready for live scan.</div>
-      <p>First scan takes <b style="color:var(--accent)">30â€“60 seconds</b> while the server fetches live NSE data for ~60 stocks. Subsequent scans are cached for 5 minutes and return instantly.</p>
+    <div class="empty-state">
+      <div class="empty-icon">⌘</div>
+      <div class="empty-text">Select a heuristic profile and execute the neural scan to extract current market entities.</div>
     </div>
   </div>
 
   <footer>
-    <span>Data Â· <b>yfinance</b> (Yahoo Finance) Â· NSE stocks Â· Cached 5 min Â· Pattern heuristics v2</span>
-    <span><b>Educational use only</b> Â· Verify on your broker Â· Not investment advice</span>
+    <div style="max-width:300px">
+      SYSTEM PROTOCOL v4.0.2<br>
+      <b>AGENTIC ERA TRADING INTERFACE</b><br>
+      Synchronized with Global Market Feeds.
+    </div>
+    <div style="text-align:right">
+      Data Source: Yahoo v8 Core · Fallback: Stooq Internal<br>
+      Latency: 12ms · Cache TTL: 300s<br>
+      <b>FOR DECISION SUPPORT ONLY</b>
+    </div>
   </footer>
 
 </div>
@@ -252,304 +388,194 @@ let selectedStrategy = null;
 let strategies = [];
 let serverReady = false;
 
-/* â”€â”€ Status banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function showBanner(msg, type='info'){
-  let b = document.getElementById('statusBanner');
-  if(!b){
-    b = document.createElement('div');
-    b.id = 'statusBanner';
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999;padding:10px 20px;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;text-align:center;transition:all .3s ease;letter-spacing:.06em';
-    document.body.prepend(b);
-  }
-  if(type==='warn'){b.style.background='rgba(245,158,11,0.92)';b.style.color='#0a0a0b';}
-  else if(type==='ok'){b.style.background='rgba(34,197,94,0.92)';b.style.color='#0a0a0b';}
-  else if(type==='err'){b.style.background='rgba(239,68,68,0.92)';b.style.color='#fff';}
-  else{b.style.background='rgba(17,17,19,0.95)';b.style.color='#d4ff3a';b.style.border='none';}
-  b.textContent = msg;
-  b.style.display='block';
-}
-function hideBanner(){ const b=document.getElementById('statusBanner');if(b)b.style.display='none'; }
+/* --- UI Helpers --- */
+const showStatus = (msg, dot='dotA', active=true) => {
+  const d = document.getElementById(dot);
+  if(d) d.className = active ? 'dot active' : 'dot';
+  if(dot==='dotA') document.getElementById('coreStatus').textContent = msg;
+};
 
-/* â”€â”€ Status polling on load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-async function pollUntilReady(){
-  let dots = 0;
-  while(true){
-    try{
+/* --- Polling --- */
+async function sync() {
+  let failCount = 0;
+  while(true) {
+    try {
       const r = await fetch(API+'/api/status');
       const st = await r.json();
-      if(st.ready){
+      if(st.ready) {
         serverReady = true;
-        showBanner(`âœ“ ${st.stocks_cached} stocks loaded Â· Ready to scan`, 'ok');
-        setTimeout(hideBanner, 3000);
-        document.getElementById('searchBtn').disabled = false;
-        document.getElementById('searchBtn').title = '';
-        return;
+        showStatus('Verified', 'dotA', true);
+        document.getElementById('runBtn').disabled = false;
+        document.getElementById('scanInfo').innerHTML = `Neural Cache Ready · <b>${st.stocks_cached}</b> entities loaded`;
+      } else {
+        serverReady = false;
+        showStatus('Syncing', 'dotA', true);
+        document.getElementById('runBtn').disabled = true;
+        document.getElementById('scanInfo').innerHTML = `Pulling Data: <b>${st.stocks_cached || 0}</b> stocks ...`;
       }
-      const pct = st.stocks_cached || 0;
-      const d = '.'.repeat((dots++%3)+1);
-      showBanner(`â³ Loading market data${d}  ${pct > 0 ? pct+' stocks done' : 'server warming up â€” ~60s first visit'}`);
-      document.getElementById('searchBtn').disabled = true;
-      document.getElementById('searchBtn').title = 'Wait for data to load';
-    } catch(e){
-      showBanner('âš  Connecting to serverâ€¦','warn');
+      failCount = 0;
+    } catch(e) {
+      failCount++;
+      showStatus('Disconnected', 'dotA', false);
+      if(failCount > 3) document.getElementById('runBtn').disabled = true;
     }
-    await new Promise(r=>setTimeout(r,3000));
+    await new Promise(r => setTimeout(r, 4000));
   }
 }
 
-/* â”€â”€ Load strategies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-async function loadStrategies(){
-  try{
+/* --- Loader --- */
+async function boot() {
+  try {
     const r = await fetch(API+'/api/strategies');
     strategies = await r.json();
-    renderStrategies();
-    document.getElementById('apiStatus').textContent='LIVE';
-    document.getElementById('apiStatus').style.color='var(--green)';
-  }catch(e){
-    document.getElementById('apiStatus').textContent='DOWN';
-    document.getElementById('apiStatus').style.color='var(--red)';
-    document.getElementById('strategies').innerHTML=
-      `<div style="grid-column:1/-1;color:var(--red);padding:20px;text-align:center">Backend unreachable.</div>`;
-  }
-}
-
-function renderStrategies(){
-  const el=document.getElementById('strategies');
-  el.innerHTML=strategies.map(s=>`
-    <div class="strat" data-id="${s.id}">
-      <div class="strat-rank">${s.rank}</div>
-      <div class="strat-name">${s.name}</div>
-      <div class="strat-stats">
-        <span>WIN <b>${s.win}</b></span>
-        <span class="avg">AVG <b>${s.avg}</b></span>
-        <span>R/R <b style="color:var(--blue)">${s.rr}Ã—</b></span>
+    const el = document.getElementById('strategyList');
+    el.innerHTML = strategies.map(s => `
+      <div class="strat-card" data-id="${s.id}">
+        <div class="id">${s.rank}</div>
+        <div class="name">${s.name}</div>
+        <div class="strat-metrics">
+          <span>Success: <b>${s.win}</b></span>
+          <span>R/R: <b style="color:var(--blue)">${s.rr}×</b></span>
+        </div>
       </div>
-    </div>
-  `).join('');
-  el.querySelectorAll('.strat').forEach(n=>{
-    n.addEventListener('click',()=>{
-      el.querySelectorAll('.strat').forEach(x=>x.classList.remove('active'));
-      n.classList.add('active');
-      selectedStrategy=n.dataset.id;
-      const strat=strategies.find(x=>x.id===selectedStrategy);
-      document.getElementById('resultCount').innerHTML=
-        `Strategy: <b>${strat.name}</b> Â· Click Run Scan`;
+    `).join('');
+
+    el.querySelectorAll('.strat-card').forEach(c => {
+      c.addEventListener('click', () => {
+        el.querySelectorAll('.strat-card').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        selectedStrategy = c.dataset.id;
+        const info = strategies.find(x => x.id === selectedStrategy);
+        document.getElementById('scanInfo').innerHTML = `Targeting: <b>${info.name}</b> · Ready for injection`;
+      });
     });
-  });
+  } catch(e) {
+    console.error("Boot error", e);
+  }
 }
 
-function formatPrice(p){
-  return '&#x20b9;' + Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
+function formatPrice(p) {
+  return '₹' + Number(p).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
-/* â”€â”€ Run Scan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-async function runScan(){
-  if(!selectedStrategy){
-    document.getElementById('resultCount').innerHTML=
-      '<span style="color:var(--amber)">âš  Please select a strategy first</span>';
+/* --- Execute --- */
+async function run() {
+  if(!selectedStrategy) {
+    alert("Please select a Heuristic Profile first.");
     return;
   }
-  const btn=document.getElementById('searchBtn');
-  btn.disabled=true;
-  btn.textContent='... Scanning...';
+  const btn = document.getElementById('runBtn');
+  const resultsEl = document.getElementById('results');
+  
+  btn.disabled = true;
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<span class="orbit" style="width:16px; height:16px; border-width:1px;"></span> Executing...';
 
-  const payload={
-    strategy:selectedStrategy,
-    cap:document.getElementById('fCap').value,
-    sector:document.getElementById('fSector').value,
-    min_score:parseInt(document.getElementById('fScore').value),
-    min_rr:parseFloat(document.getElementById('fRR').value),
-    trend:document.getElementById('fTrend').value,
-    volume_confirmed:document.getElementById('fVol').value==='true',
+  const payload = {
+    strategy: selectedStrategy,
+    cap: document.getElementById('fCap').value,
+    sector: document.getElementById('fSector').value,
+    min_score: parseInt(document.getElementById('fScore').value),
+    trend: document.getElementById('fTrend').value,
   };
 
-  const resultsEl=document.getElementById('results');
-  const setLoad=(msg)=>{
-    resultsEl.innerHTML=`<div class="loading"><div class="spinner"></div><div class="loading-text">${msg}</div></div>`;
-  };
+  resultsEl.innerHTML = `<div class="loading-state"><div class="orbit"></div><div class="tagline">Extracting Entites...</div></div>`;
 
-  // If not ready yet, wait
-  if(!serverReady){
-    setLoad('Waiting for market data to loadâ€¦ this takes ~60s on first visit');
-    let w=0;
-    while(!serverReady && w<90){ await new Promise(r=>setTimeout(r,2000)); w+=2; }
-    if(!serverReady){ setLoad('Still loading â€” try again in 15 seconds'); btn.disabled=false; btn.textContent='â–¶ Run Live Scan'; return; }
-  }
-
-  setLoad('Running scan across ' + (document.getElementById('apiStatus').textContent==='LIVE'?'all stocks':'universe') + 'â€¦');
-
-  try{
-    const r=await fetch(API+'/api/scan',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
+  try {
+    const r = await fetch(API+'/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-
-    if(r.status===503){
-      const d=await r.json().catch(()=>({detail:'Server is warming up.'}));
-      showBanner('â ³ Data loading â€” try again in 30s','warn');
-      setLoad('Server warming up â€” market data is loading in background. <b>Wait 30s and click Run Scan again.</b>');
-      resultsEl.querySelector('.loading-text').style.color='var(--amber)';
-      document.getElementById('resultCount').innerHTML='<span style="color:var(--amber)">Warming up â€” retry in 30s</span>';
-      // Auto retry after 30s
-      setTimeout(()=>{ if(serverReady){ btn.disabled=false; btn.textContent='â–¶ Run Live Scan'; } }, 5000);
-      return;
-    }
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const data=await r.json();
-    renderResults(data);
-  }catch(e){
-    resultsEl.innerHTML=`<div class="error empty">
-      <div class="empty-icon">âš </div>
-      <div class="empty-title">Scan failed.</div>
-      <p>${e.message}<br><br>The server may have restarted. <b style="color:var(--accent)">Try again in 30 seconds.</b></p>
-    </div>`;
-    document.getElementById('resultCount').innerHTML='<span style="color:var(--red)">Scan failed â€” retry</span>';
-  }finally{
-    btn.disabled=false;
-    btn.textContent='Run Live Scan';
+    const data = await r.json();
+    render(data);
+  } catch(e) {
+    resultsEl.innerHTML = `<div class="empty-state" style="border-color:var(--red)"><div class="empty-icon" style="color:var(--red)">!</div><div class="empty-text">Sequence Interrupted: ${e.message}</div></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = oldText;
   }
 }
 
-/* â”€â”€ Render Results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function renderResults(data){
-  const resultsEl=document.getElementById('results');
-  const strat=strategies.find(s=>s.id===data.strategy);
-
-  if(data.count===0){
-    resultsEl.innerHTML=`<div class="empty">
-      <div class="empty-icon">âˆ…</div>
-      <div class="empty-title">No matches found.</div>
-      <p>No stocks fit <b style="color:var(--accent)">${strat.name}</b> with current filters.
-      Of <b>${data.total_analyzed}</b> stocks analyzed, none scored â‰¥35. Try: Any Cap Â· All Sectors Â· Any trend.</p>
-    </div>`;
-    document.getElementById('resultCount').innerHTML=
-      `Strategy: <b>${strat.name}</b> Â· <span style="color:var(--amber)">0/${data.total_analyzed} matched</span>`;
+function render(data) {
+  const container = document.getElementById('results');
+  if(data.count === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">∅</div><div class="empty-text">Zero matches found in current market state. Refine heuristic parameters.</div></div>`;
     return;
   }
 
-  document.getElementById('resultCount').innerHTML=
-    `Strategy: <b>${strat.name}</b> Â· <b>${data.count}</b> of ${data.total_analyzed} stocks`;
-
-  resultsEl.innerHTML=data.results.map((s,i)=>{
-    const chgClass=s.change_pct>=0?'up':'down';
-    const chgSign=s.change_pct>=0?'+':'';
-    const macdClass=s.macd_bull?'green':'red';
-    const macdText=s.macd_bull!==undefined?(s.macd_bull?'BULL':'BEAR'):'â€”';
-    const pctHiClass=s.pct_from_52w_high>=-3?'green':s.pct_from_52w_high>=-10?'accent':'red';
-    const pctHiText=s.pct_from_52w_high>=0?'AT HIGHâ–²':s.pct_from_52w_high.toFixed(1)+'%';
+  container.innerHTML = data.results.map((s, i) => {
+    const isUp = s.change_pct >= 0;
+    const isBull = s.trend === 'bullish';
     return `
-      <div class="card" style="animation-delay:${i*0.06}s">
-        <div class="card-head">
-          <div>
-            <div class="ticker">${s.symbol}</div>
-            <div class="company">${s.company} Â· <span style="color:var(--text-faint);font-size:10px">${s.sector}</span></div>
+      <div class="card" style="animation-delay: ${i * 0.08}s">
+        <div class="card-top">
+          <div class="ticker-box">
+            <div class="sym">${s.symbol}</div>
+            <div class="comp">${s.company}</div>
           </div>
-          <div class="price-block">
-            <div class="price">${formatPrice(s.price)}</div>
-            <div class="change ${chgClass}">${chgSign}${s.change_pct.toFixed(2)}%</div>
-          </div>
-        </div>
-
-        <div class="pattern-badge">${s.strategy_meta.name} Â· Fit ${s.fit_score}</div>
-
-        <div class="card-metrics">
-          <div class="metric">
-            <div class="metric-label">RSI</div>
-            <div class="metric-value ${s.rsi>75?'red':s.rsi>55?'green':''}">${s.rsi}</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Volume</div>
-            <div class="metric-value ${s.vol_ratio>=1.5?'green':s.vol_ratio>=1.2?'accent':''}">${s.vol_ratio.toFixed(1)}Ã—</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">52W High</div>
-            <div class="metric-value ${pctHiClass}">${pctHiText}</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">MACD</div>
-            <div class="metric-value ${macdClass}">${macdText}</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Trend</div>
-            <div class="metric-value ${s.trend==='bullish'?'green':s.trend==='bearish'?'red':''}">${s.trend.slice(0,4).toUpperCase()}</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">R/R</div>
-            <div class="metric-value accent">${s.strategy_meta.rr}Ã—</div>
+          <div class="val-box">
+            <div class="cur-price">${formatPrice(s.price)}</div>
+            <div class="cur-chg ${isUp ? 'pos' : 'neg'}">${isUp ? '▲' : '▼'} ${s.change_pct.toFixed(2)}%</div>
           </div>
         </div>
 
-        <div class="reasoning">
-          <div class="reasoning-title">Why pick this</div>
+        <div class="badge-row">
+          <div class="badge strat">${s.strategy_meta.name}</div>
+          <div class="badge sector">${s.sector}</div>
+          <div class="badge">${s.cap}</div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="met-item"><div class="met-label">Signal</div><div class="met-val ${s.rsi > 70 ? 'lo' : s.rsi > 50 ? 'hi' : ''}">${s.rsi} RSI</div></div>
+          <div class="met-item"><div class="met-label">Density</div><div class="met-val">${s.vol_ratio.toFixed(1)}x Vol</div></div>
+          <div class="met-item"><div class="met-label">Range</div><div class="met-val ${s.pct_from_52w_high > -5 ? 'hi' : ''}">${s.pct_from_52w_high.toFixed(1)}% Hi</div></div>
+          <div class="met-item"><div class="met-label">Momentum</div><div class="met-val ${s.macd_bull ? 'hi' : 'lo'}">${s.macd_bull ? 'Bull' : 'Bear'}</div></div>
+          <div class="met-item"><div class="met-label">Vector</div><div class="met-val ${isBull ? 'hi' : ''}">${s.trend.toUpperCase()}</div></div>
+          <div class="met-item"><div class="met-label">Edge</div><div class="met-val accent">${s.strategy_meta.rr}x</div></div>
+        </div>
+
+        <div class="analyst-box">
+          <div class="analyst-label">Pattern Extraction Reasoning</div>
           <ul class="reasoning-list">
-            ${s.reasoning.map(r=>`<li>${r}</li>`).join('')}
+            ${s.reasoning.map(r => `<li>${r}</li>`).join('')}
           </ul>
         </div>
 
-        <div class="levels">
-          <div class="level">
-            <div class="level-label">Entry</div>
-            <div class="level-value entry">${formatPrice(s.levels.entry)}</div>
-          </div>
-          <div class="level">
-            <div class="level-label">Target (+${s.levels.tgt_pct}%)</div>
-            <div class="level-value target">${formatPrice(s.levels.target)}</div>
-          </div>
-          <div class="level">
-            <div class="level-label">Stop (-${s.levels.stop_pct}%)</div>
-            <div class="level-value stop">${formatPrice(s.levels.stop)}</div>
-          </div>
+        <div class="trade-footer">
+          <div class="trade-item"><div class="trade-label">Injection</div><div class="trade-val entry">${formatPrice(s.levels.entry)}</div></div>
+          <div class="trade-item"><div class="trade-label">Extraction</div><div class="trade-val target">${formatPrice(s.levels.target)}</div></div>
+          <div class="trade-item"><div class="trade-label">Eject</div><div class="trade-val stop">${formatPrice(s.levels.stop)}</div></div>
         </div>
 
-        <div class="score-row">
-          <div class="score-label">Fit Score</div>
-          <div class="score-bar"><div class="score-fill" style="width:${s.fit_score}%"></div></div>
-          <div class="score-val">${s.fit_score}/100</div>
+        <div class="vitals-bar">
+          <div class="v-track"><div class="v-fill" style="width:${s.fit_score}%"></div></div>
+          <div class="v-score">${s.fit_score}/100</div>
         </div>
       </div>
     `;
   }).join('');
 }
 
-/* â”€â”€ Reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function resetAll(){
-  ['fCap','fSector','fTrend'].forEach(id=>document.getElementById(id).value='any');
-  document.getElementById('fScore').value='0';
-  document.getElementById('fRR').value='0';
-  document.getElementById('fVol').value='false';
-  document.querySelectorAll('.strat').forEach(x=>x.classList.remove('active'));
-  selectedStrategy=null;
-  document.getElementById('resultCount').innerHTML='Select a strategy Â· Click Run Scan';
-  document.getElementById('results').innerHTML=`
-    <div class="empty">
-      <div class="empty-icon">â—ˆ</div>
-      <div class="empty-title">Ready for live scan.</div>
-      <p>Pick a strategy, apply filters, hit <b style="color:var(--accent)">Run Live Scan</b>.</p>
-    </div>`;
+/* --- System --- */
+function tick() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toTimeString().split(' ')[0];
+  const day = now.getDay(); const m = now.getHours()*60 + now.getMinutes();
+  const open = day >= 1 && day <= 5 && m >= 555 && m <= 930;
+  const ms = document.getElementById('marketStatus');
+  ms.textContent = open ? 'Active' : 'Standby';
+  ms.style.color = open ? 'var(--green)' : 'var(--red)';
+  document.getElementById('dotM').className = open ? 'dot active' : 'dot';
 }
 
-/* â”€â”€ Clock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function tickClock(){
-  const ist=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  const hh=String(ist.getHours()).padStart(2,'0');
-  const mm=String(ist.getMinutes()).padStart(2,'0');
-  const ss=String(ist.getSeconds()).padStart(2,'0');
-  document.getElementById('clock').textContent=`${hh}:${mm}:${ss}`;
-  const day=ist.getDay(); const mins=ist.getHours()*60+ist.getMinutes();
-  const open=day>=1&&day<=5&&mins>=555&&mins<=930;
-  document.getElementById('marketStatus').textContent=open?'OPEN':'CLOSED';
-  document.getElementById('marketStatus').style.color=open?'var(--green)':'var(--red)';
-}
+document.getElementById('runBtn').addEventListener('click', run);
+document.getElementById('resetBtn').addEventListener('click', () => location.reload());
+setInterval(tick, 1000);
+boot();
+sync();
+tick();
 
-/* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-document.getElementById('searchBtn').disabled=true;
-loadStrategies();
-pollUntilReady();
-document.getElementById('searchBtn').addEventListener('click',runScan);
-document.getElementById('resetBtn').addEventListener('click',resetAll);
-tickClock();
-setInterval(tickClock,1000);
 </script>
 </body>
 </html>
