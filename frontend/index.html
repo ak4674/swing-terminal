@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SWING // Live NSE Pattern Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b; --bg-elev:#111113; --bg-card:#16161a; --bg-hover:#1c1c22;
+    --border:#26262d; --border-bright:#3a3a44;
+    --text:#e8e8ea; --text-dim:#8a8a95; --text-faint:#55555e;
+    --accent:#d4ff3a; --accent-dim:#8fae28;
+    --green:#22c55e; --red:#ef4444; --amber:#f59e0b; --blue:#60a5fa;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter Tight',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body{
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212,255,58,0.06), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(96,165,250,0.04), transparent 60%);
+    min-height:100vh;padding:24px;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size:48px 48px;
+    mask-image:radial-gradient(ellipse at center, black 40%, transparent 80%);
+  }
+  .wrap{max-width:1480px;margin:0 auto;position:relative;z-index:2}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:16px}
+  .brand{display:flex;align-items:baseline;gap:14px}
+  .logo{font-family:'Fraunces',serif;font-weight:900;font-size:42px;letter-spacing:-0.04em;line-height:1;color:var(--text);position:relative}
+  .logo::after{content:'●';color:var(--accent);font-size:14px;position:absolute;top:4px;margin-left:6px;animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.18em}
+  .meta{display:flex;gap:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em}
+  .meta b{color:var(--accent);font-weight:600}
+  .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite}
+
+  .control-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:24px;box-shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 20px 40px -20px rgba(0,0,0,.6)}
+  .panel-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.25em;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .panel-title::before{content:'';width:24px;height:1px;background:var(--accent)}
+  .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .ctrl label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px}
+  select,input{width:100%;background:var(--bg-elev);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;padding:11px 14px;border-radius:8px;outline:none;transition:all .2s ease;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a8a95' d='M6 8L2 4h8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+  select:hover{border-color:var(--border-bright)}
+  select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(212,255,58,0.1)}
+
+  .search-row{display:flex;gap:12px;margin-top:18px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--accent);color:#0a0a0b;border:none;padding:13px 28px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:all .2s ease;display:inline-flex;align-items:center;gap:10px}
+  .btn:hover{background:#e6ff5a;transform:translateY(-1px);box-shadow:0 8px 20px -8px rgba(212,255,58,0.5)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn.ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+  .btn.ghost:hover{background:var(--bg-hover);color:var(--text);border-color:var(--border-bright);transform:none;box-shadow:none}
+  .result-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-left:auto}
+  .result-count b{color:var(--accent)}
+
+  .strategies{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:24px}
+  .strat{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
+  .strat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg, var(--accent), transparent);opacity:0;transition:opacity .2s}
+  .strat:hover{border-color:var(--border-bright);background:var(--bg-hover)}
+  .strat.active{border-color:var(--accent);background:linear-gradient(180deg, rgba(212,255,58,0.05), var(--bg-card))}
+  .strat.active::before{opacity:1}
+  .strat-rank{font-family:'Fraunces',serif;font-size:11px;color:var(--text-faint);letter-spacing:0.2em}
+  .strat-name{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin:4px 0 10px;letter-spacing:-0.01em}
+  .strat-stats{display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em}
+  .strat-stats span b{color:var(--green);font-weight:600}
+  .strat-stats .avg b{color:var(--accent)}
+
+  .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .25s ease;position:relative;display:flex;flex-direction:column;animation:fadeUp .5s ease both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--green));transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+  .card:hover{border-color:var(--border-bright);transform:translateY(-2px);box-shadow:0 20px 40px -20px rgba(0,0,0,0.5)}
+  .card:hover::before{transform:scaleX(1)}
+
+  .card-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .ticker{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;letter-spacing:0.02em}
+  .company{font-size:12px;color:var(--text-dim);margin-top:3px;font-weight:400}
+  .price-block{text-align:right}
+  .price{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px}
+  .change{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-top:2px}
+  .change.up{color:var(--green)}
+  .change.down{color:var(--red)}
+
+  .pattern-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,255,58,0.1);color:var(--accent);border:1px solid rgba(212,255,58,0.3);padding:4px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:14px 20px 0;align-self:flex-start}
+  .pattern-badge::before{content:'◆';font-size:8px}
+
+  .card-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .metric{background:var(--bg-card);padding:12px;text-align:center}
+  .metric-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+  .metric-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
+  .metric-value.green{color:var(--green)}
+  .metric-value.red{color:var(--red)}
+  .metric-value.accent{color:var(--accent)}
+
+  .reasoning{padding:14px 20px 18px}
+  .reasoning-title{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.2em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .reasoning-title::before{content:'';width:14px;height:1px;background:var(--accent)}
+  .reasoning-list{list-style:none}
+  .reasoning-list li{font-size:12.5px;line-height:1.55;color:var(--text);padding:5px 0 5px 18px;position:relative}
+  .reasoning-list li::before{content:'→';position:absolute;left:0;color:var(--accent);font-weight:600}
+  .reasoning-list li b{color:var(--accent);font-weight:600}
+
+  .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 20px 18px;border-top:1px solid var(--border);background:var(--bg-elev)}
+  .level{text-align:center}
+  .level-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+  .level-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
+  .level-value.entry{color:var(--blue)}
+  .level-value.target{color:var(--green)}
+  .level-value.stop{color:var(--red)}
+
+  .score-row{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg-elev);border-top:1px solid var(--border)}
+  .score-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.15em}
+  .score-bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+  .score-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .8s ease}
+  .score-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:var(--accent)}
+
+  .empty,.loading,.error{grid-column:1/-1;text-align:center;padding:80px 20px;border:1px dashed var(--border);border-radius:14px}
+  .empty-icon{font-family:'Fraunces',serif;font-size:72px;font-weight:900;color:var(--text-faint);line-height:1;margin-bottom:16px}
+  .empty-title{font-family:'Fraunces',serif;font-size:22px;color:var(--text);margin-bottom:8px}
+  .empty p{font-size:13px;max-width:420px;margin:0 auto;line-height:1.6;color:var(--text-dim)}
+  .error{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.05)}
+  .error .empty-icon{color:var(--red)}
+  .spinner{display:inline-block;width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.2em;margin-top:16px}
+
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.15em;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  footer b{color:var(--amber)}
+
+  @media (max-width:720px){body{padding:14px}.logo{font-size:30px}.card-metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand">
+        <div class="logo">SWING</div>
+        <div class="sub">Live NSE Pattern Terminal</div>
+      </div>
+      <div class="sub" style="margin-top:10px;opacity:.6">Real-time scans · Cup/Handle · Double Bottom · IPO Base · Momentum · Flat Base</div>
+    </div>
+    <div class="meta">
+      <span><span class="live-dot"></span>Market <b id="marketStatus">—</b></span>
+      <span>API <b id="apiStatus">CHECKING</b></span>
+      <span>IST <b id="clock">—</b></span>
+    </div>
+  </header>
+
+  <div class="control-panel">
+    <div class="panel-title">01 · Select Strategy</div>
+    <div class="strategies" id="strategies">
+      <div style="grid-column:1/-1;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px;padding:20px 0;text-align:center">Loading strategies…</div>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <div class="panel-title">02 · Filter & Screen</div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>Market Cap</label>
+        <select id="fCap">
+          <option value="any">Any</option>
+          <option value="large">Large Cap</option>
+          <option value="mid">Mid Cap</option>
+          <option value="small">Small Cap</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Sector</label>
+        <select id="fSector">
+          <option value="any">All Sectors</option>
+          <option>Information Technology</option>
+          <option>Banking & Financials</option>
+          <option>Pharmaceuticals</option>
+          <option>Auto & Ancillaries</option>
+          <option>FMCG</option>
+          <option>Energy</option>
+          <option>Metals</option>
+          <option>Consumer Durables</option>
+          <option>Capital Goods</option>
+          <option>Chemicals</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Min. Fit Score</label>
+        <select id="fScore">
+          <option value="0">Any (40+)</option>
+          <option value="60">Good (60+)</option>
+          <option value="70">High (70+)</option>
+          <option value="80">Elite (80+)</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Risk / Reward</label>
+        <select id="fRR">
+          <option value="0">Any</option>
+          <option value="2">≥ 2.0×</option>
+          <option value="2.5">≥ 2.5×</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Trend</label>
+        <select id="fTrend">
+          <option value="any">Any</option>
+          <option value="bullish">Bullish</option>
+          <option value="neutral">Neutral</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Volume Confirmation</label>
+        <select id="fVol">
+          <option value="false">Any</option>
+          <option value="true">Spike ≥1.5×</option>
+        </select>
+      </div>
+    </div>
+    <div class="search-row">
+      <button class="btn" id="searchBtn">▶ Run Live Scan</button>
+      <button class="btn ghost" id="resetBtn">↺ Reset</button>
+      <div class="result-count" id="resultCount">Select a strategy · Click Run Scan</div>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty">
+      <div class="empty-icon">◈</div>
+      <div class="empty-title">Ready for live scan.</div>
+      <p>First scan takes <b style="color:var(--accent)">30–60 seconds</b> while the server fetches live NSE data for ~60 stocks. Subsequent scans are cached for 5 minutes and return instantly.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Data · Live from NSE India · Cached 5 min · Refresh for latest</span>
+    <span><b>Educational use only</b> · Verify on your broker · Not investment advice</span>
+  </footer>
+
+</div>
+
+<script>
+const API = ''; // same origin
+
+let selectedStrategy = null;
+let strategies = [];
+
+async function loadStrategies(){
+  try {
+    const r = await fetch(API + '/api/strategies');
+    strategies = await r.json();
+    renderStrategies();
+    document.getElementById('apiStatus').textContent = 'LIVE';
+    document.getElementById('apiStatus').style.color = 'var(--green)';
+  } catch(e){
+    document.getElementById('apiStatus').textContent = 'DOWN';
+    document.getElementById('apiStatus').style.color = 'var(--red)';
+    document.getElementById('strategies').innerHTML =
+      `<div style="grid-column:1/-1;color:var(--red);padding:20px;text-align:center">Backend unreachable. Is the server running?</div>`;
+  }
+}
+
+function renderStrategies(){
+  const el = document.getElementById('strategies');
+  el.innerHTML = strategies.map(s=>`
+    <div class="strat" data-id="${s.id}">
+      <div class="strat-rank">${s.rank}</div>
+      <div class="strat-name">${s.name}</div>
+      <div class="strat-stats">
+        <span>WIN <b>${s.win}</b></span>
+        <span class="avg">AVG <b>${s.avg}</b></span>
+        <span>R/R <b style="color:var(--blue)">${s.rr}×</b></span>
+      </div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.strat').forEach(n=>{
+    n.addEventListener('click',()=>{
+      el.querySelectorAll('.strat').forEach(x=>x.classList.remove('active'));
+      n.classList.add('active');
+      selectedStrategy = n.dataset.id;
+      const strat = strategies.find(x=>x.id===selectedStrategy);
+      document.getElementById('resultCount').innerHTML =
+        `Strategy: <b>${strat.name}</b> · Click Run Scan`;
+    });
+  });
+}
+
+function formatPrice(p){
+  return '₹' + Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
+}
+
+async function runScan(){
+  if(!selectedStrategy){
+    document.getElementById('resultCount').innerHTML =
+      '<span style="color:var(--amber)">⚠ Please select a strategy first</span>';
+    return;
+  }
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.textContent = '⋯ Scanning NSE…';
+
+  const payload = {
+    strategy: selectedStrategy,
+    cap: document.getElementById('fCap').value,
+    sector: document.getElementById('fSector').value,
+    min_score: parseInt(document.getElementById('fScore').value),
+    min_rr: parseFloat(document.getElementById('fRR').value),
+    trend: document.getElementById('fTrend').value,
+    volume_confirmed: document.getElementById('fVol').value === 'true',
+  };
+
+  const resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = `<div class="loading"><div class="spinner"></div>
+    <div class="loading-text">Fetching live NSE data · This may take 30–60s first time</div></div>`;
+
+  try {
+    const r = await fetch(API + '/api/scan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderResults(data);
+  } catch(e){
+    resultsEl.innerHTML = `<div class="error empty">
+      <div class="empty-icon">⚠</div>
+      <div class="empty-title">Scan failed.</div>
+      <p>${e.message}. If this persists, NSE may be rate-limiting. Try again in 30s.</p>
+    </div>`;
+    document.getElementById('resultCount').innerHTML =
+      '<span style="color:var(--red)">Scan failed</span>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Run Live Scan';
+  }
+}
+
+function renderResults(data){
+  const resultsEl = document.getElementById('results');
+  const strat = strategies.find(s=>s.id===data.strategy);
+
+  if(data.count === 0){
+    resultsEl.innerHTML = `<div class="empty">
+      <div class="empty-icon">∅</div>
+      <div class="empty-title">No matches.</div>
+      <p>No stocks fit <b style="color:var(--accent)">${strat.name}</b> with these filters right now.
+      Of ${data.total_analyzed} stocks analyzed, none met your criteria. Try loosening filters.</p>
+    </div>`;
+    document.getElementById('resultCount').innerHTML =
+      `Strategy: <b>${strat.name}</b> · <span style="color:var(--amber)">0/${data.total_analyzed}</span>`;
+    return;
+  }
+
+  document.getElementById('resultCount').innerHTML =
+    `Strategy: <b>${strat.name}</b> · <b>${data.count}</b> of ${data.total_analyzed} stocks`;
+
+  resultsEl.innerHTML = data.results.map(s=>{
+    const chgClass = s.change_pct >= 0 ? 'up' : 'down';
+    const chgSign = s.change_pct >= 0 ? '+' : '';
+    return `
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="ticker">${s.symbol}</div>
+            <div class="company">${s.company}</div>
+          </div>
+          <div class="price-block">
+            <div class="price">${formatPrice(s.price)}</div>
+            <div class="change ${chgClass}">${chgSign}${s.change_pct.toFixed(2)}%</div>
+          </div>
+        </div>
+
+        <div class="pattern-badge">${s.strategy_meta.name} · Fit ${s.fit_score}</div>
+
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">RSI</div>
+            <div class="metric-value ${s.rsi>70?'red':s.rsi>55?'green':''}">${s.rsi}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Volume</div>
+            <div class="metric-value ${s.vol_ratio>=1.5?'green':''}">${s.vol_ratio.toFixed(1)}×</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Trend</div>
+            <div class="metric-value ${s.trend==='bullish'?'green':s.trend==='bearish'?'red':''}">${s.trend.slice(0,4).toUpperCase()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">R/R</div>
+            <div class="metric-value accent">${s.strategy_meta.rr}×</div>
+          </div>
+        </div>
+
+        <div class="reasoning">
+          <div class="reasoning-title">Why pick this</div>
+          <ul class="reasoning-list">
+            ${s.reasoning.map(r=>`<li>${r}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="levels">
+          <div class="level">
+            <div class="level-label">Entry</div>
+            <div class="level-value entry">₹${s.levels.entry}</div>
+          </div>
+          <div class="level">
+            <div class="level-label">Target (+${s.levels.tgt_pct}%)</div>
+            <div class="level-value target">₹${s.levels.target}</div>
+          </div>
+          <div class="level">
+            <div class="level-label">Stop (-${s.levels.stop_pct}%)</div>
+            <div class="level-value stop">₹${s.levels.stop}</div>
+          </div>
+        </div>
+
+        <div class="score-row">
+          <div class="score-label">Fit Score</div>
+          <div class="score-bar"><div class="score-fill" style="width:${s.fit_score}%"></div></div>
+          <div class="score-val">${s.fit_score}/100</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function resetAll(){
+  ['fCap','fSector','fTrend'].forEach(id=>document.getElementById(id).value='any');
+  document.getElementById('fScore').value='0';
+  document.getElementById('fRR').value='0';
+  document.getElementById('fVol').value='false';
+  document.querySelectorAll('.strat').forEach(x=>x.classList.remove('active'));
+  selectedStrategy = null;
+  document.getElementById('resultCount').innerHTML='Select a strategy · Click Run Scan';
+  document.getElementById('results').innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">◈</div>
+      <div class="empty-title">Ready for live scan.</div>
+      <p>Pick a strategy, apply filters, hit <b style="color:var(--accent)">Run Live Scan</b>.</p>
+    </div>`;
+}
+
+function tickClock(){
+  const now = new Date();
+  const ist = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  const hh = String(ist.getHours()).padStart(2,'0');
+  const mm = String(ist.getMinutes()).padStart(2,'0');
+  const ss = String(ist.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${hh}:${mm}:${ss}`;
+  const day = ist.getDay();
+  const mins = ist.getHours()*60 + ist.getMinutes();
+  const open = day>=1 && day<=5 && mins>=555 && mins<=930;
+  document.getElementById('marketStatus').textContent = open?'OPEN':'CLOSED';
+  document.getElementById('marketStatus').style.color = open?'var(--green)':'var(--red)';
+}
+
+loadStrategies();
+document.getElementById('searchBtn').addEventListener('click', runScan);
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+tickClock();
+setInterval(tickClock, 1000);
+</script>
+</body>
+</html>
