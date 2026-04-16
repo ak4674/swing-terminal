@@ -356,19 +356,20 @@ def score_double_bottom(c, v) -> int:
 
 
 def score_ipo_base(c, listing_age) -> int:
-    if listing_age > 730 or len(c) < 15: return 0
+    # Relaxed to 2500 days (~7 years) to include Zomato, Polycab, etc.
+    if listing_age > 2500 or len(c) < 15: return 0
     win = c[-25:] if len(c) >= 25 else c
     pk = max(win); lo = min(win); last = c[-1]
     depth = (pk - lo) / pk if pk > 0 else 1.0
-    if depth > 0.30: return 15
-    s = 50
-    if depth < 0.15: s += 15
-    if depth < 0.10: s += 5
-    if last > pk * 0.93: s += 15
-    if last > pk * 0.98: s += 5
-    if listing_age < 365: s += 5
-    if tightness(c[-15:] if len(c) >= 15 else c) < 0.08: s += 5
-    return min(s, 90)
+    if depth > 0.35: return 15
+    s = 40
+    if depth < 0.20: s += 15
+    if depth < 0.12: s += 10
+    if last > pk * 0.90: s += 15
+    if last > pk * 0.97: s += 5
+    if listing_age < 1000: s += 10
+    if tightness(c[-15:] if len(c) >= 15 else c) < 0.10: s += 10
+    return min(s, 92)
 
 
 def score_momentum(c, v) -> int:
