@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -36,7 +36,7 @@
   header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:16px}
   .brand{display:flex;align-items:baseline;gap:14px}
   .logo{font-family:'Fraunces',serif;font-weight:900;font-size:42px;letter-spacing:-0.04em;line-height:1;color:var(--text);position:relative}
-  .logo::after{content:'●';color:var(--accent);font-size:14px;position:absolute;top:4px;margin-left:6px;animation:pulse 2s ease-in-out infinite}
+  .logo::after{content:'â—';color:var(--accent);font-size:14px;position:absolute;top:4px;margin-left:6px;animation:pulse 2s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   .sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.18em}
   .meta{display:flex;gap:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em}
@@ -90,7 +90,7 @@
   .change.down{color:var(--red)}
 
   .pattern-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,255,58,0.1);color:var(--accent);border:1px solid rgba(212,255,58,0.3);padding:4px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:14px 20px 0;align-self:flex-start}
-  .pattern-badge::before{content:'◆';font-size:8px}
+  .pattern-badge::before{content:'â—†';font-size:8px}
 
   .card-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
   .metric{background:var(--bg-card);padding:12px;text-align:center}
@@ -105,7 +105,7 @@
   .reasoning-title::before{content:'';width:14px;height:1px;background:var(--accent)}
   .reasoning-list{list-style:none}
   .reasoning-list li{font-size:12.5px;line-height:1.55;color:var(--text);padding:5px 0 5px 18px;position:relative}
-  .reasoning-list li::before{content:'→';position:absolute;left:0;color:var(--accent);font-weight:600}
+  .reasoning-list li::before{content:'â†’';position:absolute;left:0;color:var(--accent);font-weight:600}
   .reasoning-list li b{color:var(--accent);font-weight:600}
 
   .levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 20px 18px;border-top:1px solid var(--border);background:var(--bg-elev)}
@@ -147,24 +147,24 @@
         <div class="logo">SWING</div>
         <div class="sub">Live NSE Pattern Terminal</div>
       </div>
-      <div class="sub" style="margin-top:10px;opacity:.6">Real-time scans · Cup/Handle · Double Bottom · IPO Base · Momentum · Flat Base</div>
+      <div class="sub" style="margin-top:10px;opacity:.6">Real-time scans Â· Cup/Handle Â· Double Bottom Â· IPO Base Â· Momentum Â· Flat Base</div>
     </div>
     <div class="meta">
-      <span><span class="live-dot"></span>Market <b id="marketStatus">—</b></span>
+      <span><span class="live-dot"></span>Market <b id="marketStatus">â€”</b></span>
       <span>API <b id="apiStatus">CHECKING</b></span>
-      <span>IST <b id="clock">—</b></span>
+      <span>IST <b id="clock">â€”</b></span>
     </div>
   </header>
 
   <div class="control-panel">
-    <div class="panel-title">01 · Select Strategy</div>
+    <div class="panel-title">01 Â· Select Strategy</div>
     <div class="strategies" id="strategies">
-      <div style="grid-column:1/-1;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px;padding:20px 0;text-align:center">Loading strategies…</div>
+      <div style="grid-column:1/-1;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px;padding:20px 0;text-align:center">Loading strategiesâ€¦</div>
     </div>
   </div>
 
   <div class="control-panel">
-    <div class="panel-title">02 · Filter & Screen</div>
+    <div class="panel-title">02 Â· Filter & Screen</div>
     <div class="controls">
       <div class="ctrl">
         <label>Market Cap</label>
@@ -204,8 +204,8 @@
         <label>Risk / Reward</label>
         <select id="fRR">
           <option value="0">Any</option>
-          <option value="2">≥ 2.0×</option>
-          <option value="2.5">≥ 2.5×</option>
+          <option value="2">â‰¥ 2.0Ã—</option>
+          <option value="2.5">â‰¥ 2.5Ã—</option>
         </select>
       </div>
       <div class="ctrl">
@@ -220,63 +220,109 @@
         <label>Volume Confirmation</label>
         <select id="fVol">
           <option value="false">Any</option>
-          <option value="true">Spike ≥1.5×</option>
+          <option value="true">Spike â‰¥1.5Ã—</option>
         </select>
       </div>
     </div>
     <div class="search-row">
-      <button class="btn" id="searchBtn">▶ Run Live Scan</button>
-      <button class="btn ghost" id="resetBtn">↺ Reset</button>
-      <div class="result-count" id="resultCount">Select a strategy · Click Run Scan</div>
+      <button class="btn" id="searchBtn">â–¶ Run Live Scan</button>
+      <button class="btn ghost" id="resetBtn">â†º Reset</button>
+      <div class="result-count" id="resultCount">Select a strategy Â· Click Run Scan</div>
     </div>
   </div>
 
   <div class="results" id="results">
     <div class="empty">
-      <div class="empty-icon">◈</div>
+      <div class="empty-icon">â—ˆ</div>
       <div class="empty-title">Ready for live scan.</div>
-      <p>First scan takes <b style="color:var(--accent)">30–60 seconds</b> while the server fetches live NSE data for ~60 stocks. Subsequent scans are cached for 5 minutes and return instantly.</p>
+      <p>First scan takes <b style="color:var(--accent)">30â€“60 seconds</b> while the server fetches live NSE data for ~60 stocks. Subsequent scans are cached for 5 minutes and return instantly.</p>
     </div>
   </div>
 
   <footer>
-    <span>Data · <b>yfinance</b> (Yahoo Finance) · NSE stocks · Cached 5 min · Pattern heuristics v2</span>
-    <span><b>Educational use only</b> · Verify on your broker · Not investment advice</span>
+    <span>Data Â· <b>yfinance</b> (Yahoo Finance) Â· NSE stocks Â· Cached 5 min Â· Pattern heuristics v2</span>
+    <span><b>Educational use only</b> Â· Verify on your broker Â· Not investment advice</span>
   </footer>
 
 </div>
 
 <script>
-const API = ''; // same origin
-
+const API = '';
 let selectedStrategy = null;
 let strategies = [];
+let serverReady = false;
 
+/* â”€â”€ Status banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function showBanner(msg, type='info'){
+  let b = document.getElementById('statusBanner');
+  if(!b){
+    b = document.createElement('div');
+    b.id = 'statusBanner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999;padding:10px 20px;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;text-align:center;transition:all .3s ease;letter-spacing:.06em';
+    document.body.prepend(b);
+  }
+  if(type==='warn'){b.style.background='rgba(245,158,11,0.92)';b.style.color='#0a0a0b';}
+  else if(type==='ok'){b.style.background='rgba(34,197,94,0.92)';b.style.color='#0a0a0b';}
+  else if(type==='err'){b.style.background='rgba(239,68,68,0.92)';b.style.color='#fff';}
+  else{b.style.background='rgba(17,17,19,0.95)';b.style.color='#d4ff3a';b.style.border='none';}
+  b.textContent = msg;
+  b.style.display='block';
+}
+function hideBanner(){ const b=document.getElementById('statusBanner');if(b)b.style.display='none'; }
+
+/* â”€â”€ Status polling on load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+async function pollUntilReady(){
+  let dots = 0;
+  while(true){
+    try{
+      const r = await fetch(API+'/api/status');
+      const st = await r.json();
+      if(st.ready){
+        serverReady = true;
+        showBanner(`âœ“ ${st.stocks_cached} stocks loaded Â· Ready to scan`, 'ok');
+        setTimeout(hideBanner, 3000);
+        document.getElementById('searchBtn').disabled = false;
+        document.getElementById('searchBtn').title = '';
+        return;
+      }
+      const pct = st.stocks_cached || 0;
+      const d = '.'.repeat((dots++%3)+1);
+      showBanner(`â³ Loading market data${d}  ${pct > 0 ? pct+' stocks done' : 'server warming up â€” ~60s first visit'}`);
+      document.getElementById('searchBtn').disabled = true;
+      document.getElementById('searchBtn').title = 'Wait for data to load';
+    } catch(e){
+      showBanner('âš  Connecting to serverâ€¦','warn');
+    }
+    await new Promise(r=>setTimeout(r,3000));
+  }
+}
+
+/* â”€â”€ Load strategies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function loadStrategies(){
-  try {
-    const r = await fetch(API + '/api/strategies');
+  try{
+    const r = await fetch(API+'/api/strategies');
     strategies = await r.json();
     renderStrategies();
-    document.getElementById('apiStatus').textContent = 'LIVE';
-    document.getElementById('apiStatus').style.color = 'var(--green)';
-  } catch(e){
-    document.getElementById('apiStatus').textContent = 'DOWN';
-    document.getElementById('apiStatus').style.color = 'var(--red)';
-    document.getElementById('strategies').innerHTML =
-      `<div style="grid-column:1/-1;color:var(--red);padding:20px;text-align:center">Backend unreachable. Is the server running?</div>`;
+    document.getElementById('apiStatus').textContent='LIVE';
+    document.getElementById('apiStatus').style.color='var(--green)';
+  }catch(e){
+    document.getElementById('apiStatus').textContent='DOWN';
+    document.getElementById('apiStatus').style.color='var(--red)';
+    document.getElementById('strategies').innerHTML=
+      `<div style="grid-column:1/-1;color:var(--red);padding:20px;text-align:center">Backend unreachable.</div>`;
   }
 }
 
 function renderStrategies(){
-  const el = document.getElementById('strategies');
-  el.innerHTML = strategies.map(s=>`
+  const el=document.getElementById('strategies');
+  el.innerHTML=strategies.map(s=>`
     <div class="strat" data-id="${s.id}">
       <div class="strat-rank">${s.rank}</div>
       <div class="strat-name">${s.name}</div>
       <div class="strat-stats">
         <span>WIN <b>${s.win}</b></span>
         <span class="avg">AVG <b>${s.avg}</b></span>
-        <span>R/R <b style="color:var(--blue)">${s.rr}×</b></span>
+        <span>R/R <b style="color:var(--blue)">${s.rr}Ã—</b></span>
       </div>
     </div>
   `).join('');
@@ -284,133 +330,120 @@ function renderStrategies(){
     n.addEventListener('click',()=>{
       el.querySelectorAll('.strat').forEach(x=>x.classList.remove('active'));
       n.classList.add('active');
-      selectedStrategy = n.dataset.id;
-      const strat = strategies.find(x=>x.id===selectedStrategy);
-      document.getElementById('resultCount').innerHTML =
-        `Strategy: <b>${strat.name}</b> · Click Run Scan`;
+      selectedStrategy=n.dataset.id;
+      const strat=strategies.find(x=>x.id===selectedStrategy);
+      document.getElementById('resultCount').innerHTML=
+        `Strategy: <b>${strat.name}</b> Â· Click Run Scan`;
     });
   });
 }
 
 function formatPrice(p){
-  return '₹' + Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
+  return 'â‚¹'+Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
 }
 
-async function checkStatus(){
-  try {
-    const r = await fetch(API + '/api/status');
-    return await r.json();
-  } catch(e){ return null; }
-}
-
+/* â”€â”€ Run Scan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function runScan(){
   if(!selectedStrategy){
-    document.getElementById('resultCount').innerHTML =
-      '<span style="color:var(--amber)">⚠ Please select a strategy first</span>';
+    document.getElementById('resultCount').innerHTML=
+      '<span style="color:var(--amber)">âš  Please select a strategy first</span>';
     return;
   }
-  const btn = document.getElementById('searchBtn');
-  btn.disabled = true;
-  btn.textContent = '⋯ Scanning…';
+  const btn=document.getElementById('searchBtn');
+  btn.disabled=true;
+  btn.textContent='â‹¯ Scanningâ€¦';
 
-  const payload = {
-    strategy: selectedStrategy,
-    cap: document.getElementById('fCap').value,
-    sector: document.getElementById('fSector').value,
-    min_score: parseInt(document.getElementById('fScore').value),
-    min_rr: parseFloat(document.getElementById('fRR').value),
-    trend: document.getElementById('fTrend').value,
-    volume_confirmed: document.getElementById('fVol').value === 'true',
+  const payload={
+    strategy:selectedStrategy,
+    cap:document.getElementById('fCap').value,
+    sector:document.getElementById('fSector').value,
+    min_score:parseInt(document.getElementById('fScore').value),
+    min_rr:parseFloat(document.getElementById('fRR').value),
+    trend:document.getElementById('fTrend').value,
+    volume_confirmed:document.getElementById('fVol').value==='true',
   };
 
-  const resultsEl = document.getElementById('results');
-
-  // Show live status while backend builds cache
-  const setLoadingMsg = (msg) => {
-    resultsEl.innerHTML = `<div class="loading"><div class="spinner"></div>
-      <div class="loading-text">${msg}</div></div>`;
+  const resultsEl=document.getElementById('results');
+  const setLoad=(msg)=>{
+    resultsEl.innerHTML=`<div class="loading"><div class="spinner"></div><div class="loading-text">${msg}</div></div>`;
   };
 
-  setLoadingMsg('Connecting to market data server…');
-
-  // Poll status until ready (max 90s)
-  let waited = 0;
-  while(waited < 90){
-    const st = await checkStatus();
-    if(st && st.ready){
-      setLoadingMsg(`Data ready — ${st.stocks_cached} stocks cached · Running scan…`);
-      break;
-    }
-    const cached = st ? st.stocks_cached : 0;
-    setLoadingMsg(`Loading market data… ${cached > 0 ? cached + ' stocks done · ' : ''}server warming up (~30–60s first time)`);
-    await new Promise(res => setTimeout(res, 3000));
-    waited += 3;
+  // If not ready yet, wait
+  if(!serverReady){
+    setLoad('Waiting for market data to loadâ€¦ this takes ~60s on first visit');
+    let w=0;
+    while(!serverReady && w<90){ await new Promise(r=>setTimeout(r,2000)); w+=2; }
+    if(!serverReady){ setLoad('Still loading â€” try again in 15 seconds'); btn.disabled=false; btn.textContent='â–¶ Run Live Scan'; return; }
   }
 
-  try {
-    const r = await fetch(API + '/api/scan', {
+  setLoad('Running scan across ' + (document.getElementById('apiStatus').textContent==='LIVE'?'all stocks':'universe') + 'â€¦');
+
+  try{
+    const r=await fetch(API+'/api/scan',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      body:JSON.stringify(payload)
     });
-    if(r.status === 503){
-      const errData = await r.json().catch(()=>({detail:'Server warming up'}));
-      resultsEl.innerHTML = `<div class="error empty">
-        <div class="empty-icon">⏳</div>
-        <div class="empty-title">Server warming up.</div>
-        <p>${errData.detail || 'Data is still loading in background.'}
-        <br><br><b style="color:var(--accent)">Wait 30 seconds and click Run Scan again.</b></p>
-      </div>`;
-      document.getElementById('resultCount').innerHTML =
-        '<span style="color:var(--amber)">Warming up — retry in 30s</span>';
+
+    if(r.status===503){
+      const d=await r.json().catch(()=>({detail:'Server is warming up.'}));
+      showBanner('â³ Data loading â€” try again in 30s','warn');
+      setLoad('Server warming up â€” market data is loading in background. <b>Wait 30s and click Run Scan again.</b>');
+      resultsEl.querySelector('.loading-text').style.color='var(--amber)';
+      document.getElementById('resultCount').innerHTML='<span style="color:var(--amber)">Warming up â€” retry in 30s</span>';
+      // Auto retry after 30s
+      setTimeout(()=>{ if(serverReady){ btn.disabled=false; btn.textContent='â–¶ Run Live Scan'; } }, 5000);
       return;
     }
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data=await r.json();
     renderResults(data);
-  } catch(e){
-    resultsEl.innerHTML = `<div class="error empty">
-      <div class="empty-icon">⚠</div>
+  }catch(e){
+    resultsEl.innerHTML=`<div class="error empty">
+      <div class="empty-icon">âš </div>
       <div class="empty-title">Scan failed.</div>
-      <p>${e.message}. If this persists, try again in 30 seconds.</p>
+      <p>${e.message}<br><br>The server may have restarted. <b style="color:var(--accent)">Try again in 30 seconds.</b></p>
     </div>`;
-    document.getElementById('resultCount').innerHTML =
-      '<span style="color:var(--red)">Scan failed — retry</span>';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '▶ Run Live Scan';
+    document.getElementById('resultCount').innerHTML='<span style="color:var(--red)">Scan failed â€” retry</span>';
+  }finally{
+    btn.disabled=false;
+    btn.textContent='â–¶ Run Live Scan';
   }
 }
 
-
+/* â”€â”€ Render Results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderResults(data){
-  const resultsEl = document.getElementById('results');
-  const strat = strategies.find(s=>s.id===data.strategy);
+  const resultsEl=document.getElementById('results');
+  const strat=strategies.find(s=>s.id===data.strategy);
 
-  if(data.count === 0){
-    resultsEl.innerHTML = `<div class="empty">
-      <div class="empty-icon">∅</div>
-      <div class="empty-title">No matches.</div>
-      <p>No stocks fit <b style="color:var(--accent)">${strat.name}</b> with these filters right now.
-      Of ${data.total_analyzed} stocks analyzed, none met your criteria. Try loosening filters.</p>
+  if(data.count===0){
+    resultsEl.innerHTML=`<div class="empty">
+      <div class="empty-icon">âˆ…</div>
+      <div class="empty-title">No matches found.</div>
+      <p>No stocks fit <b style="color:var(--accent)">${strat.name}</b> with current filters.
+      Of <b>${data.total_analyzed}</b> stocks analyzed, none scored â‰¥35. Try: Any Cap Â· All Sectors Â· Any trend.</p>
     </div>`;
-    document.getElementById('resultCount').innerHTML =
-      `Strategy: <b>${strat.name}</b> · <span style="color:var(--amber)">0/${data.total_analyzed}</span>`;
+    document.getElementById('resultCount').innerHTML=
+      `Strategy: <b>${strat.name}</b> Â· <span style="color:var(--amber)">0/${data.total_analyzed} matched</span>`;
     return;
   }
 
-  document.getElementById('resultCount').innerHTML =
-    `Strategy: <b>${strat.name}</b> · <b>${data.count}</b> of ${data.total_analyzed} stocks`;
+  document.getElementById('resultCount').innerHTML=
+    `Strategy: <b>${strat.name}</b> Â· <b>${data.count}</b> of ${data.total_analyzed} stocks`;
 
-  resultsEl.innerHTML = data.results.map(s=>{
-    const chgClass = s.change_pct >= 0 ? 'up' : 'down';
-    const chgSign = s.change_pct >= 0 ? '+' : '';
+  resultsEl.innerHTML=data.results.map((s,i)=>{
+    const chgClass=s.change_pct>=0?'up':'down';
+    const chgSign=s.change_pct>=0?'+':'';
+    const macdClass=s.macd_bull?'green':'red';
+    const macdText=s.macd_bull!==undefined?(s.macd_bull?'BULL':'BEAR'):'â€”';
+    const pctHiClass=s.pct_from_52w_high>=-3?'green':s.pct_from_52w_high>=-10?'accent':'red';
+    const pctHiText=s.pct_from_52w_high>=0?'AT HIGHâ–²':s.pct_from_52w_high.toFixed(1)+'%';
     return `
-      <div class="card">
+      <div class="card" style="animation-delay:${i*0.06}s">
         <div class="card-head">
           <div>
             <div class="ticker">${s.symbol}</div>
-            <div class="company">${s.company}</div>
+            <div class="company">${s.company} Â· <span style="color:var(--text-faint);font-size:10px">${s.sector}</span></div>
           </div>
           <div class="price-block">
             <div class="price">${formatPrice(s.price)}</div>
@@ -418,31 +451,32 @@ function renderResults(data){
           </div>
         </div>
 
-        <div class="pattern-badge">${s.strategy_meta.name} · Fit ${s.fit_score}</div>
+        <div class="pattern-badge">${s.strategy_meta.name} Â· Fit ${s.fit_score}</div>
 
         <div class="card-metrics">
           <div class="metric">
             <div class="metric-label">RSI</div>
-            <div class="metric-value ${s.rsi>70?'red':s.rsi>55?'green':''}">${s.rsi}</div>
+            <div class="metric-value ${s.rsi>75?'red':s.rsi>55?'green':''}">${s.rsi}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Volume</div>
-            <div class="metric-value ${s.vol_ratio>=1.5?'green':s.vol_ratio>=1.2?'accent':''}">${s.vol_ratio.toFixed(1)}×</div>
+            <div class="metric-value ${s.vol_ratio>=1.5?'green':s.vol_ratio>=1.2?'accent':''}">${s.vol_ratio.toFixed(1)}Ã—</div>
           </div>
           <div class="metric">
-            <div class="metric-label">52W Hi</div>
-            <div class="metric-value ${s.pct_from_52w_high>=-3?'green':s.pct_from_52w_high>=-10?'accent':'red'}">${s.pct_from_52w_high>=0?'AT HIGH':s.pct_from_52w_high.toFixed(1)+'%'}</div>
+            <div class="metric-label">52W High</div>
+            <div class="metric-value ${pctHiClass}">${pctHiText}</div>
           </div>
           <div class="metric">
             <div class="metric-label">MACD</div>
-            <div class="metric-value ${s.macd!==null&&s.macd_signal!==null&&s.macd>s.macd_signal?'green':'red'}">${s.macd!==null&&s.macd_signal!==null?(s.macd>s.macd_signal?'BULL':'BEAR'):'—'}</div>
+            <div class="metric-value ${macdClass}">${macdText}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Trend</div>
             <div class="metric-value ${s.trend==='bullish'?'green':s.trend==='bearish'?'red':''}">${s.trend.slice(0,4).toUpperCase()}</div>
           </div>
+          <div class="metric">
             <div class="metric-label">R/R</div>
-            <div class="metric-value accent">${s.strategy_meta.rr}×</div>
+            <div class="metric-value accent">${s.strategy_meta.rr}Ã—</div>
           </div>
         </div>
 
@@ -456,15 +490,15 @@ function renderResults(data){
         <div class="levels">
           <div class="level">
             <div class="level-label">Entry</div>
-            <div class="level-value entry">₹${s.levels.entry}</div>
+            <div class="level-value entry">${formatPrice(s.levels.entry)}</div>
           </div>
           <div class="level">
             <div class="level-label">Target (+${s.levels.tgt_pct}%)</div>
-            <div class="level-value target">₹${s.levels.target}</div>
+            <div class="level-value target">${formatPrice(s.levels.target)}</div>
           </div>
           <div class="level">
             <div class="level-label">Stop (-${s.levels.stop_pct}%)</div>
-            <div class="level-value stop">₹${s.levels.stop}</div>
+            <div class="level-value stop">${formatPrice(s.levels.stop)}</div>
           </div>
         </div>
 
@@ -478,41 +512,44 @@ function renderResults(data){
   }).join('');
 }
 
+/* â”€â”€ Reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function resetAll(){
   ['fCap','fSector','fTrend'].forEach(id=>document.getElementById(id).value='any');
   document.getElementById('fScore').value='0';
   document.getElementById('fRR').value='0';
   document.getElementById('fVol').value='false';
   document.querySelectorAll('.strat').forEach(x=>x.classList.remove('active'));
-  selectedStrategy = null;
-  document.getElementById('resultCount').innerHTML='Select a strategy · Click Run Scan';
-  document.getElementById('results').innerHTML = `
+  selectedStrategy=null;
+  document.getElementById('resultCount').innerHTML='Select a strategy Â· Click Run Scan';
+  document.getElementById('results').innerHTML=`
     <div class="empty">
-      <div class="empty-icon">◈</div>
+      <div class="empty-icon">â—ˆ</div>
       <div class="empty-title">Ready for live scan.</div>
       <p>Pick a strategy, apply filters, hit <b style="color:var(--accent)">Run Live Scan</b>.</p>
     </div>`;
 }
 
+/* â”€â”€ Clock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function tickClock(){
-  const now = new Date();
-  const ist = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  const hh = String(ist.getHours()).padStart(2,'0');
-  const mm = String(ist.getMinutes()).padStart(2,'0');
-  const ss = String(ist.getSeconds()).padStart(2,'0');
-  document.getElementById('clock').textContent = `${hh}:${mm}:${ss}`;
-  const day = ist.getDay();
-  const mins = ist.getHours()*60 + ist.getMinutes();
-  const open = day>=1 && day<=5 && mins>=555 && mins<=930;
-  document.getElementById('marketStatus').textContent = open?'OPEN':'CLOSED';
-  document.getElementById('marketStatus').style.color = open?'var(--green)':'var(--red)';
+  const ist=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  const hh=String(ist.getHours()).padStart(2,'0');
+  const mm=String(ist.getMinutes()).padStart(2,'0');
+  const ss=String(ist.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=`${hh}:${mm}:${ss}`;
+  const day=ist.getDay(); const mins=ist.getHours()*60+ist.getMinutes();
+  const open=day>=1&&day<=5&&mins>=555&&mins<=930;
+  document.getElementById('marketStatus').textContent=open?'OPEN':'CLOSED';
+  document.getElementById('marketStatus').style.color=open?'var(--green)':'var(--red)';
 }
 
+/* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+document.getElementById('searchBtn').disabled=true;
 loadStrategies();
-document.getElementById('searchBtn').addEventListener('click', runScan);
-document.getElementById('resetBtn').addEventListener('click', resetAll);
+pollUntilReady();
+document.getElementById('searchBtn').addEventListener('click',runScan);
+document.getElementById('resetBtn').addEventListener('click',resetAll);
 tickClock();
-setInterval(tickClock, 1000);
+setInterval(tickClock,1000);
 </script>
 </body>
 </html>
