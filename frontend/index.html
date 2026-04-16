@@ -300,7 +300,7 @@
     </div>
 
     <div class="filter-panel">
-      <div class="section-label">Config · Filter & Optimization</div>
+      <div class="section-label">Config &middot; Filter & Optimization</div>
       <div class="filter-grid">
         <div class="field">
           <label>Market Universe</label>
@@ -351,7 +351,6 @@
         <div style="display:flex; gap:16px;">
           <button class="reset-btn" id="resetBtn">System Reset</button>
           <button class="run-btn" id="runBtn" disabled>
-            <span class="icon">⚡</span>
             Execute Live Scan
           </button>
         </div>
@@ -362,7 +361,7 @@
   <div class="section-label" style="margin-bottom:24px;">Extracted Entities</div>
   <div class="results" id="results">
     <div class="empty-state">
-      <div class="empty-icon">⌘</div>
+      <div class="empty-icon">&plus;</div>
       <div class="empty-text">Select a heuristic profile and execute the neural scan to extract current market entities.</div>
     </div>
   </div>
@@ -374,8 +373,8 @@
       Synchronized with Global Market Feeds.
     </div>
     <div style="text-align:right">
-      Data Source: Yahoo v8 Core · Fallback: Stooq Internal<br>
-      Latency: 12ms · Cache TTL: 300s<br>
+      Data Source: Yahoo v8 Core &middot; Fallback: Stooq Internal<br>
+      Latency: 12ms &middot; Cache TTL: 300s<br>
       <b>FOR DECISION SUPPORT ONLY</b>
     </div>
   </footer>
@@ -406,7 +405,7 @@ async function sync() {
         serverReady = true;
         showStatus('Verified', 'dotA', true);
         document.getElementById('runBtn').disabled = false;
-        document.getElementById('scanInfo').innerHTML = `Neural Cache Ready · <b>${st.stocks_cached}</b> entities loaded`;
+        document.getElementById('scanInfo').innerHTML = `Neural Cache Ready &middot; <b>${st.stocks_cached}</b> entities loaded`;
       } else {
         serverReady = false;
         showStatus('Syncing', 'dotA', true);
@@ -435,7 +434,7 @@ async function boot() {
         <div class="name">${s.name}</div>
         <div class="strat-metrics">
           <span>Success: <b>${s.win}</b></span>
-          <span>R/R: <b style="color:var(--blue)">${s.rr}×</b></span>
+          <span>R/R: <b style="color:var(--blue)">${s.rr}</b></span>
         </div>
       </div>
     `).join('');
@@ -446,7 +445,7 @@ async function boot() {
         c.classList.add('active');
         selectedStrategy = c.dataset.id;
         const info = strategies.find(x => x.id === selectedStrategy);
-        document.getElementById('scanInfo').innerHTML = `Targeting: <b>${info.name}</b> · Ready for injection`;
+        document.getElementById('scanInfo').innerHTML = `Targeting: <b>${info.name}</b> &middot; Ready for injection`;
       });
     });
   } catch(e) {
@@ -455,7 +454,7 @@ async function boot() {
 }
 
 function formatPrice(p) {
-  return '₹' + Number(p).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  return '&#x20B9;' + Number(p).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
 /* --- Execute --- */
@@ -469,7 +468,7 @@ async function run() {
   
   btn.disabled = true;
   const oldText = btn.innerHTML;
-  btn.innerHTML = '<span class="orbit" style="width:16px; height:16px; border-width:1px;"></span> Executing...';
+  btn.innerHTML = 'Executing...';
 
   const payload = {
     strategy: selectedStrategy,
@@ -490,7 +489,7 @@ async function run() {
     const data = await r.json();
     render(data);
   } catch(e) {
-    resultsEl.innerHTML = `<div class="empty-state" style="border-color:var(--red)"><div class="empty-icon" style="color:var(--red)">!</div><div class="empty-text">Sequence Interrupted: ${e.message}</div></div>`;
+    resultsEl.innerHTML = `<div class="empty-state" style="border-color:var(--red)"><div class="empty-icon">!</div><div class="empty-text">Sequence Interrupted: ${e.message}</div></div>`;
   } finally {
     btn.disabled = false;
     btn.innerHTML = oldText;
@@ -500,7 +499,7 @@ async function run() {
 function render(data) {
   const container = document.getElementById('results');
   if(data.count === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">∅</div><div class="empty-text">Zero matches found in current market state. Refine heuristic parameters.</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">!</div><div class="empty-text">Zero matches found in current market state. Refine heuristic parameters.</div></div>`;
     return;
   }
 
@@ -516,7 +515,7 @@ function render(data) {
           </div>
           <div class="val-box">
             <div class="cur-price">${formatPrice(s.price)}</div>
-            <div class="cur-chg ${isUp ? 'pos' : 'neg'}">${isUp ? '▲' : '▼'} ${s.change_pct.toFixed(2)}%</div>
+            <div class="cur-chg ${isUp ? 'pos' : 'neg'}">${isUp ? '&blacktriangle;' : '&blacktriangledown;'} ${s.change_pct.toFixed(2)}%</div>
           </div>
         </div>
 
@@ -532,7 +531,7 @@ function render(data) {
           <div class="met-item"><div class="met-label">Range</div><div class="met-val ${s.pct_from_52w_high > -5 ? 'hi' : ''}">${s.pct_from_52w_high.toFixed(1)}% Hi</div></div>
           <div class="met-item"><div class="met-label">Momentum</div><div class="met-val ${s.macd_bull ? 'hi' : 'lo'}">${s.macd_bull ? 'Bull' : 'Bear'}</div></div>
           <div class="met-item"><div class="met-label">Vector</div><div class="met-val ${isBull ? 'hi' : ''}">${s.trend.toUpperCase()}</div></div>
-          <div class="met-item"><div class="met-label">Edge</div><div class="met-val accent">${s.strategy_meta.rr}x</div></div>
+          <div class="met-item"><div class="met-label">Edge</div><div class="met-val accent">${s.strategy_meta.rr}</div></div>
         </div>
 
         <div class="analyst-box">
