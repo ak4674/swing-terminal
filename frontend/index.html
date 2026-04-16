@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -339,7 +339,7 @@ function renderStrategies(){
 }
 
 function formatPrice(p){
-  return 'â‚¹'+Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
+  return '&#x20b9;' + Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
 }
 
 /* â”€â”€ Run Scan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -351,7 +351,7 @@ async function runScan(){
   }
   const btn=document.getElementById('searchBtn');
   btn.disabled=true;
-  btn.textContent='â‹¯ Scanningâ€¦';
+  btn.textContent='... Scanning...';
 
   const payload={
     strategy:selectedStrategy,
@@ -387,7 +387,7 @@ async function runScan(){
 
     if(r.status===503){
       const d=await r.json().catch(()=>({detail:'Server is warming up.'}));
-      showBanner('â³ Data loading â€” try again in 30s','warn');
+      showBanner('â ³ Data loading â€” try again in 30s','warn');
       setLoad('Server warming up â€” market data is loading in background. <b>Wait 30s and click Run Scan again.</b>');
       resultsEl.querySelector('.loading-text').style.color='var(--amber)';
       document.getElementById('resultCount').innerHTML='<span style="color:var(--amber)">Warming up â€” retry in 30s</span>';
@@ -407,7 +407,7 @@ async function runScan(){
     document.getElementById('resultCount').innerHTML='<span style="color:var(--red)">Scan failed â€” retry</span>';
   }finally{
     btn.disabled=false;
-    btn.textContent='â–¶ Run Live Scan';
+    btn.textContent='Run Live Scan';
   }
 }
 

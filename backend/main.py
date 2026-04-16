@@ -622,23 +622,6 @@ class ScanParams(BaseModel):
     volume_confirmed: bool = False
 
 
-@app.get("/api/debug")
-async def debug():
-    stocks = get_cache()
-    if not stocks: return {"ok": False, "msg": "Cache empty"}
-    import traceback
-    try:
-        s = stocks[0]; sid = "mom"
-        res = {
-            "ok": True, "stock": s, "score": s["scores"].get(sid, 0),
-            "levels": calc_levels(s["price"], sid),
-            "reasoning": build_reasoning(s, sid)
-        }
-        return json_safe(res)
-    except Exception as e:
-        return json_safe({"ok": False, "error": str(e), "trace": traceback.format_exc()})
-
-
 @app.post("/api/scan")
 async def scan(params: ScanParams):
     import traceback
