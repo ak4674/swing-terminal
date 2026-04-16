@@ -1,22 +1,18 @@
 """
-SWING Terminal — FastAPI backend v3
-Data: yfinance (works from any cloud IP)
-Architecture: background universe refresh + fast synchronous scan
-- On startup: immediately begin fetching universe in background thread
-- /api/scan: returns whatever is cached instantly; if cache empty, waits up to 25s
-- /api/status: shows cache health
+SWING Terminal — FastAPI backend v4
+Data: yfinance with multiple fallback strategies to handle cloud IP blocking
+- Primary: yfinance with session headers spoofing browser
+- Fallback: yfinance download() batch method
+- Architecture: background thread cache (no request timeouts)
 """
-import os
-import time
-import logging
-import asyncio
-import threading
+import os, time, logging, threading, asyncio
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
-import yfinance as yf
+import requests
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -26,71 +22,210 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("swing")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# UNIVERSE  (yfinance tickers → .NS suffix for NSE)
+# UNIVERSE
 # ─────────────────────────────────────────────────────────────────────────────
 UNIVERSE = [
-    ("TCS.NS",         "TCS",         "Tata Consultancy Services",    "Information Technology", "large", 5500),
-    ("INFY.NS",        "INFY",        "Infosys",                      "Information Technology", "large", 8000),
-    ("WIPRO.NS",       "WIPRO",       "Wipro",                        "Information Technology", "large", 8000),
-    ("HCLTECH.NS",     "HCLTECH",     "HCL Technologies",             "Information Technology", "large", 7000),
-    ("TECHM.NS",       "TECHM",       "Tech Mahindra",                "Information Technology", "large", 5500),
-    ("LTIM.NS",        "LTIM",        "LTIMindtree",                  "Information Technology", "mid",    900),
-    ("PERSISTENT.NS",  "PERSISTENT",  "Persistent Systems",           "Information Technology", "mid",   4500),
-    ("COFORGE.NS",     "COFORGE",     "Coforge",                      "Information Technology", "mid",   5000),
-    ("KPITTECH.NS",    "KPITTECH",    "KPIT Technologies",            "Information Technology", "small", 1800),
-    ("TATAELXSI.NS",   "TATAELXSI",  "Tata Elxsi",                   "Information Technology", "mid",   7000),
-    ("HAPPSTMNDS.NS",  "HAPPSTMNDS",  "Happiest Minds Technologies",  "Information Technology", "small", 1500),
-    ("HDFCBANK.NS",    "HDFCBANK",    "HDFC Bank",                    "Banking & Financials",   "large", 9000),
-    ("ICICIBANK.NS",   "ICICIBANK",   "ICICI Bank",                   "Banking & Financials",   "large", 9000),
-    ("AXISBANK.NS",    "AXISBANK",    "Axis Bank",                    "Banking & Financials",   "large", 8500),
-    ("KOTAKBANK.NS",   "KOTAKBANK",   "Kotak Mahindra Bank",          "Banking & Financials",   "large", 8000),
-    ("SBIN.NS",        "SBIN",        "State Bank of India",          "Banking & Financials",   "large", 9000),
-    ("BAJFINANCE.NS",  "BAJFINANCE",  "Bajaj Finance",                "Banking & Financials",   "large", 6000),
-    ("BAJAJFINSV.NS",  "BAJAJFINSV",  "Bajaj Finserv",                "Banking & Financials",   "large", 5500),
-    ("CDSL.NS",        "CDSL",        "Central Depository Services",  "Banking & Financials",   "small", 2800),
-    ("RELIANCE.NS",    "RELIANCE",    "Reliance Industries",          "Energy",                 "large", 9000),
-    ("ONGC.NS",        "ONGC",        "ONGC",                         "Energy",                 "large", 8500),
-    ("IOC.NS",         "IOC",         "Indian Oil Corporation",       "Energy",                 "large", 8000),
-    ("BPCL.NS",        "BPCL",        "Bharat Petroleum",             "Energy",                 "large", 8000),
-    ("IEX.NS",         "IEX",         "Indian Energy Exchange",       "Energy",                 "mid",   1500),
-    ("POWERGRID.NS",   "POWERGRID",   "Power Grid Corporation",       "Energy",                 "large", 5000),
-    ("SUNPHARMA.NS",   "SUNPHARMA",   "Sun Pharmaceutical",           "Pharmaceuticals",        "large", 8000),
-    ("DRREDDY.NS",     "DRREDDY",     "Dr Reddy's Laboratories",      "Pharmaceuticals",        "large", 8500),
-    ("CIPLA.NS",       "CIPLA",       "Cipla",                        "Pharmaceuticals",        "large", 8500),
-    ("LUPIN.NS",       "LUPIN",       "Lupin",                        "Pharmaceuticals",        "mid",   7500),
-    ("MANKIND.NS",     "MANKIND",     "Mankind Pharma",               "Pharmaceuticals",        "mid",    900),
-    ("METROPOLIS.NS",  "METROPOLIS",  "Metropolis Healthcare",        "Pharmaceuticals",        "small", 2500),
-    ("MARUTI.NS",      "MARUTI",      "Maruti Suzuki India",          "Auto & Ancillaries",     "large", 7500),
-    ("M&M.NS",         "M&M",         "Mahindra & Mahindra",          "Auto & Ancillaries",     "large", 8500),
-    ("TATAMOTORS.NS",  "TATAMOTORS",  "Tata Motors",                  "Auto & Ancillaries",     "large", 9000),
-    ("BAJAJ-AUTO.NS",  "BAJAJ-AUTO",  "Bajaj Auto",                   "Auto & Ancillaries",     "large", 6000),
-    ("EICHERMOT.NS",   "EICHERMOT",   "Eicher Motors",                "Auto & Ancillaries",     "large", 7000),
-    ("SONACOMS.NS",    "SONACOMS",    "Sona BLW Precision",           "Auto & Ancillaries",     "mid",   1700),
-    ("ITC.NS",         "ITC",         "ITC",                          "FMCG",                   "large", 9000),
-    ("HINDUNILVR.NS",  "HINDUNILVR",  "Hindustan Unilever",           "FMCG",                   "large", 9000),
-    ("NESTLEIND.NS",   "NESTLEIND",   "Nestle India",                 "FMCG",                   "large", 8500),
-    ("BRITANNIA.NS",   "BRITANNIA",   "Britannia Industries",         "FMCG",                   "large", 8500),
-    ("DABUR.NS",       "DABUR",       "Dabur India",                  "FMCG",                   "large", 8500),
-    ("ASIANPAINT.NS",  "ASIANPAINT",  "Asian Paints",                 "FMCG",                   "large", 8500),
-    ("MARICO.NS",      "MARICO",      "Marico",                       "FMCG",                   "large", 7000),
-    ("LT.NS",          "LT",          "Larsen & Toubro",              "Capital Goods",           "large", 8500),
-    ("ULTRACEMCO.NS",  "ULTRACEMCO",  "UltraTech Cement",             "Capital Goods",           "large", 7000),
-    ("POLYCAB.NS",     "POLYCAB",     "Polycab India",                "Capital Goods",           "mid",   2300),
-    ("ASTRAL.NS",      "ASTRAL",      "Astral Ltd",                   "Capital Goods",           "mid",   5500),
-    ("IRCTC.NS",       "IRCTC",       "Indian Railway Catering",      "Capital Goods",           "mid",   2300),
-    ("TATASTEEL.NS",   "TATASTEEL",   "Tata Steel",                   "Metals",                 "large", 9000),
-    ("JSWSTEEL.NS",    "JSWSTEEL",    "JSW Steel",                    "Metals",                 "large", 7000),
-    ("HINDALCO.NS",    "HINDALCO",    "Hindalco Industries",          "Metals",                 "large", 8000),
-    ("TITAN.NS",       "TITAN",       "Titan Company",                "Consumer Durables",       "large", 8000),
-    ("VOLTAS.NS",      "VOLTAS",      "Voltas",                       "Consumer Durables",       "mid",   8000),
-    ("DIXON.NS",       "DIXON",       "Dixon Technologies",           "Consumer Durables",       "mid",   1900),
-    ("ZOMATO.NS",      "ZOMATO",      "Zomato",                       "Consumer Durables",       "mid",   1700),
-    ("TRENT.NS",       "TRENT",       "Trent",                        "Consumer Durables",       "mid",   8000),
-    ("PIIND.NS",       "PIIND",       "PI Industries",                "Chemicals",               "mid",   6000),
-    ("SRF.NS",         "SRF",         "SRF",                          "Chemicals",               "mid",   7000),
-    ("DEEPAKNTR.NS",   "DEEPAKNTR",   "Deepak Nitrite",               "Chemicals",               "mid",   6000),
-    ("NAVINFLUOR.NS",  "NAVINFLUOR",  "Navin Fluorine",               "Chemicals",               "mid",   7000),
+    ("TCS.NS",        "TCS",        "Tata Consultancy Services",   "Information Technology", "large", 5500),
+    ("INFY.NS",       "INFY",       "Infosys",                     "Information Technology", "large", 8000),
+    ("WIPRO.NS",      "WIPRO",      "Wipro",                       "Information Technology", "large", 8000),
+    ("HCLTECH.NS",    "HCLTECH",    "HCL Technologies",            "Information Technology", "large", 7000),
+    ("TECHM.NS",      "TECHM",      "Tech Mahindra",               "Information Technology", "large", 5500),
+    ("LTIM.NS",       "LTIM",       "LTIMindtree",                 "Information Technology", "mid",    900),
+    ("PERSISTENT.NS", "PERSISTENT", "Persistent Systems",          "Information Technology", "mid",   4500),
+    ("COFORGE.NS",    "COFORGE",    "Coforge",                     "Information Technology", "mid",   5000),
+    ("KPITTECH.NS",   "KPITTECH",   "KPIT Technologies",           "Information Technology", "small", 1800),
+    ("TATAELXSI.NS",  "TATAELXSI",  "Tata Elxsi",                  "Information Technology", "mid",   7000),
+    ("HDFCBANK.NS",   "HDFCBANK",   "HDFC Bank",                   "Banking & Financials",   "large", 9000),
+    ("ICICIBANK.NS",  "ICICIBANK",  "ICICI Bank",                  "Banking & Financials",   "large", 9000),
+    ("AXISBANK.NS",   "AXISBANK",   "Axis Bank",                   "Banking & Financials",   "large", 8500),
+    ("KOTAKBANK.NS",  "KOTAKBANK",  "Kotak Mahindra Bank",         "Banking & Financials",   "large", 8000),
+    ("SBIN.NS",       "SBIN",       "State Bank of India",         "Banking & Financials",   "large", 9000),
+    ("BAJFINANCE.NS", "BAJFINANCE", "Bajaj Finance",               "Banking & Financials",   "large", 6000),
+    ("BAJAJFINSV.NS", "BAJAJFINSV", "Bajaj Finserv",               "Banking & Financials",   "large", 5500),
+    ("CDSL.NS",       "CDSL",       "Central Depository Services", "Banking & Financials",   "small", 2800),
+    ("RELIANCE.NS",   "RELIANCE",   "Reliance Industries",         "Energy",                 "large", 9000),
+    ("ONGC.NS",       "ONGC",       "ONGC",                        "Energy",                 "large", 8500),
+    ("IOC.NS",        "IOC",        "Indian Oil Corporation",      "Energy",                 "large", 8000),
+    ("BPCL.NS",       "BPCL",       "Bharat Petroleum",            "Energy",                 "large", 8000),
+    ("IEX.NS",        "IEX",        "Indian Energy Exchange",      "Energy",                 "mid",   1500),
+    ("SUNPHARMA.NS",  "SUNPHARMA",  "Sun Pharmaceutical",          "Pharmaceuticals",        "large", 8000),
+    ("DRREDDY.NS",    "DRREDDY",    "Dr Reddy's Laboratories",     "Pharmaceuticals",        "large", 8500),
+    ("CIPLA.NS",      "CIPLA",      "Cipla",                       "Pharmaceuticals",        "large", 8500),
+    ("LUPIN.NS",      "LUPIN",      "Lupin",                       "Pharmaceuticals",        "mid",   7500),
+    ("MANKIND.NS",    "MANKIND",    "Mankind Pharma",              "Pharmaceuticals",        "mid",    900),
+    ("MARUTI.NS",     "MARUTI",     "Maruti Suzuki India",         "Auto & Ancillaries",     "large", 7500),
+    ("M&M.NS",        "M&M",        "Mahindra & Mahindra",         "Auto & Ancillaries",     "large", 8500),
+    ("TATAMOTORS.NS", "TATAMOTORS", "Tata Motors",                 "Auto & Ancillaries",     "large", 9000),
+    ("BAJAJ-AUTO.NS", "BAJAJ-AUTO", "Bajaj Auto",                  "Auto & Ancillaries",     "large", 6000),
+    ("EICHERMOT.NS",  "EICHERMOT",  "Eicher Motors",               "Auto & Ancillaries",     "large", 7000),
+    ("ITC.NS",        "ITC",        "ITC",                         "FMCG",                   "large", 9000),
+    ("HINDUNILVR.NS", "HINDUNILVR", "Hindustan Unilever",          "FMCG",                   "large", 9000),
+    ("NESTLEIND.NS",  "NESTLEIND",  "Nestle India",                "FMCG",                   "large", 8500),
+    ("BRITANNIA.NS",  "BRITANNIA",  "Britannia Industries",        "FMCG",                   "large", 8500),
+    ("DABUR.NS",      "DABUR",      "Dabur India",                 "FMCG",                   "large", 8500),
+    ("ASIANPAINT.NS", "ASIANPAINT", "Asian Paints",                "FMCG",                   "large", 8500),
+    ("MARICO.NS",     "MARICO",     "Marico",                      "FMCG",                   "large", 7000),
+    ("LT.NS",         "LT",         "Larsen & Toubro",             "Capital Goods",           "large", 8500),
+    ("ULTRACEMCO.NS", "ULTRACEMCO", "UltraTech Cement",            "Capital Goods",           "large", 7000),
+    ("POLYCAB.NS",    "POLYCAB",    "Polycab India",               "Capital Goods",           "mid",   2300),
+    ("ASTRAL.NS",     "ASTRAL",     "Astral Ltd",                  "Capital Goods",           "mid",   5500),
+    ("IRCTC.NS",      "IRCTC",      "Indian Railway Catering",     "Capital Goods",           "mid",   2300),
+    ("TATASTEEL.NS",  "TATASTEEL",  "Tata Steel",                  "Metals",                 "large", 9000),
+    ("JSWSTEEL.NS",   "JSWSTEEL",   "JSW Steel",                   "Metals",                 "large", 7000),
+    ("HINDALCO.NS",   "HINDALCO",   "Hindalco Industries",         "Metals",                 "large", 8000),
+    ("TITAN.NS",      "TITAN",      "Titan Company",               "Consumer Durables",       "large", 8000),
+    ("VOLTAS.NS",     "VOLTAS",     "Voltas",                      "Consumer Durables",       "mid",   8000),
+    ("DIXON.NS",      "DIXON",      "Dixon Technologies",          "Consumer Durables",       "mid",   1900),
+    ("ZOMATO.NS",     "ZOMATO",     "Zomato",                      "Consumer Durables",       "mid",   1700),
+    ("TRENT.NS",      "TRENT",      "Trent",                       "Consumer Durables",       "mid",   8000),
+    ("PIIND.NS",      "PIIND",      "PI Industries",               "Chemicals",               "mid",   6000),
+    ("SRF.NS",        "SRF",        "SRF",                         "Chemicals",               "mid",   7000),
+    ("DEEPAKNTR.NS",  "DEEPAKNTR",  "Deepak Nitrite",              "Chemicals",               "mid",   6000),
+    ("NAVINFLUOR.NS", "NAVINFLUOR", "Navin Fluorine",              "Chemicals",               "mid",   7000),
 ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA FETCHING — uses requests directly with browser headers to bypass blocks
+# ─────────────────────────────────────────────────────────────────────────────
+YAHOO_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json,text/plain,*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Origin": "https://finance.yahoo.com",
+    "Referer": "https://finance.yahoo.com/",
+    "DNT": "1",
+}
+
+_session = requests.Session()
+_session.headers.update(YAHOO_HEADERS)
+
+
+def _get_crumb() -> Optional[str]:
+    """Fetch Yahoo Finance crumb token needed for v8 API."""
+    try:
+        r = _session.get("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=10)
+        if r.status_code == 200 and r.text and r.text != "":
+            return r.text.strip()
+    except Exception:
+        pass
+    try:
+        # Alternate crumb endpoint
+        r = _session.get(
+            "https://finance.yahoo.com/",
+            headers=YAHOO_HEADERS, timeout=10
+        )
+        import re
+        m = re.search(r'"crumb":"([^"]+)"', r.text)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return None
+
+
+_crumb: Optional[str] = None
+_crumb_ts: float = 0.0
+
+
+def get_crumb() -> Optional[str]:
+    global _crumb, _crumb_ts
+    if _crumb and (time.time() - _crumb_ts) < 3600:
+        return _crumb
+    _crumb = _get_crumb()
+    _crumb_ts = time.time()
+    return _crumb
+
+
+def fetch_ohlcv_yahoo(symbol: str, days: int = 365) -> Optional[pd.DataFrame]:
+    """
+    Fetch OHLCV from Yahoo Finance v8 chart API using browser-spoofed session.
+    Returns DataFrame with columns: Open, High, Low, Close, Volume
+    """
+    end = int(time.time())
+    start = end - days * 86400
+    crumb = get_crumb()
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {
+        "period1": start,
+        "period2": end,
+        "interval": "1d",
+        "events": "history",
+        "includeAdjustedClose": "true",
+    }
+    if crumb:
+        params["crumb"] = crumb
+
+    for attempt in range(2):
+        try:
+            r = _session.get(url, params=params, timeout=15)
+            if r.status_code == 401 and attempt == 0:
+                # Crumb expired — get new one
+                global _crumb
+                _crumb = None
+                crumb = get_crumb()
+                if crumb:
+                    params["crumb"] = crumb
+                continue
+            if r.status_code != 200:
+                log.warning(f"Yahoo {symbol} HTTP {r.status_code}")
+                return None
+            j = r.json()
+            result = j.get("chart", {}).get("result", [])
+            if not result:
+                return None
+            res = result[0]
+            timestamps = res.get("timestamp", [])
+            q = res.get("indicators", {}).get("quote", [{}])[0]
+            adjclose = res.get("indicators", {}).get("adjclose", [{}])[0].get("adjclose", [])
+            if not timestamps or not q.get("close"):
+                return None
+
+            df = pd.DataFrame({
+                "Open":   q.get("open", []),
+                "High":   q.get("high", []),
+                "Low":    q.get("low", []),
+                "Close":  adjclose if adjclose else q.get("close", []),
+                "Volume": q.get("volume", []),
+            }, index=pd.to_datetime(timestamps, unit="s"))
+            df.dropna(subset=["Close"], inplace=True)
+            return df if len(df) >= 20 else None
+        except Exception as e:
+            log.warning(f"fetch_ohlcv_yahoo {symbol} attempt {attempt}: {e}")
+            time.sleep(1)
+    return None
+
+
+def fetch_ohlcv_stooq(symbol: str) -> Optional[pd.DataFrame]:
+    """
+    Fallback: Stooq.com CSV endpoint — free, no auth, no IP blocking.
+    Converts NSE tickers: TCS.NS -> TCS.IN
+    """
+    stooq_sym = symbol.replace(".NS", ".IN").replace("&", "%26")
+    url = f"https://stooq.com/q/d/l/?s={stooq_sym}&i=d"
+    try:
+        df = pd.read_csv(url, parse_dates=["Date"], index_col="Date")
+        df = df.rename(columns={"Open": "Open", "High": "High", "Low": "Low",
+                                 "Close": "Close", "Volume": "Volume"})
+        df = df.sort_index()
+        cutoff = pd.Timestamp.now() - pd.Timedelta(days=365)
+        df = df[df.index >= cutoff]
+        df.dropna(subset=["Close"], inplace=True)
+        return df if len(df) >= 20 else None
+    except Exception as e:
+        log.warning(f"Stooq fallback failed for {stooq_sym}: {e}")
+        return None
+
+
+def fetch_ohlcv(yf_symbol: str) -> Optional[pd.DataFrame]:
+    """Try Yahoo first, then Stooq."""
+    df = fetch_ohlcv_yahoo(yf_symbol)
+    if df is not None and len(df) >= 20:
+        return df
+    log.info(f"Yahoo failed for {yf_symbol}, trying Stooq")
+    return fetch_ohlcv_stooq(yf_symbol)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INDICATORS
@@ -101,317 +236,253 @@ def rsi_wilder(closes: List[float], period: int = 14) -> Optional[float]:
         return None
     d = np.diff(arr)
     g = np.where(d > 0, d, 0.0)
-    l = np.where(d < 0, -d, 0.0)
-    ag = g[:period].mean()
-    al = l[:period].mean()
-    for gi, li in zip(g[period:], l[period:]):
+    lo = np.where(d < 0, -d, 0.0)
+    ag = g[:period].mean(); al = lo[:period].mean()
+    for gi, li in zip(g[period:], lo[period:]):
         ag = (ag * (period - 1) + gi) / period
         al = (al * (period - 1) + li) / period
-    if al == 0:
-        return 100.0
+    if al == 0: return 100.0
     return float(100 - 100 / (1 + ag / al))
 
 
 def ema_val(closes: List[float], period: int) -> Optional[float]:
     arr = np.array(closes, dtype=np.float64)
-    if len(arr) < period:
-        return None
+    if len(arr) < period: return None
     k = 2.0 / (period + 1)
     e = arr[:period].mean()
-    for x in arr[period:]:
-        e = x * k + e * (1 - k)
+    for x in arr[period:]: e = x * k + e * (1 - k)
     return float(e)
 
 
-def macd_hist(closes: List[float]) -> Optional[float]:
-    """Returns MACD histogram (MACD - Signal). Positive = bullish."""
-    if len(closes) < 35:
-        return None
+def macd_bullish(closes: List[float]) -> bool:
+    if len(closes) < 35: return False
     arr = np.array(closes, dtype=np.float64)
-    k12 = 2 / 13; k26 = 2 / 27; k9 = 2 / 10
+    k12, k26, k9 = 2/13, 2/27, 2/10
     e12 = arr[:12].mean(); e26 = arr[:26].mean()
-    macd_arr = []
-    for x in arr[12:]:
-        e12 = x * k12 + e12 * (1 - k12)
+    ml = []
+    for x in arr[12:]: e12 = x*k12 + e12*(1-k12)
     for x in arr[26:]:
-        e26 = x * k26 + e26 * (1 - k26)
-        macd_arr.append(e12 - e26)
-    if len(macd_arr) < 9:
-        return None
-    sig = np.mean(macd_arr[-9:])
-    e_sig = sig
-    k9_val = 2 / 10
-    for m in macd_arr[-9:]:
-        e_sig = m * k9_val + e_sig * (1 - k9_val)
-    return float(macd_arr[-1] - e_sig)
+        e26 = x*k26 + e26*(1-k26)
+        ml.append(e12 - e26)
+    if len(ml) < 9: return False
+    sig = np.mean(ml[-9:])
+    for m in ml[-9:]: sig = m*k9 + sig*(1-k9)
+    return ml[-1] > sig
 
 
-def vol_ratio_fn(volumes: List[float], lookback: int = 20) -> float:
-    if len(volumes) < 2:
-        return 1.0
-    avg = np.mean(volumes[-lookback - 1:-1]) if len(volumes) > lookback else np.mean(volumes[:-1])
-    if avg <= 0:
-        return 1.0
+def vol_ratio_fn(volumes: List[float]) -> float:
+    if len(volumes) < 2: return 1.0
+    avg = np.mean(volumes[-21:-1]) if len(volumes) > 20 else np.mean(volumes[:-1])
+    if avg <= 0: return 1.0
     return float(np.clip(volumes[-1] / avg, 0.3, 5.0))
 
 
 def trend_signal(closes: List[float]) -> str:
-    if len(closes) < 50:
-        return "neutral"
-    e20 = ema_val(closes, 20)
-    e50 = ema_val(closes, 50)
-    if e20 is None or e50 is None:
-        return "neutral"
+    if len(closes) < 50: return "neutral"
+    e20 = ema_val(closes, 20); e50 = ema_val(closes, 50)
+    if None in (e20, e50): return "neutral"
     last = closes[-1]
-    if last > e20 > e50:
-        return "bullish"
-    if last < e20 < e50:
-        return "bearish"
+    if last > e20 > e50: return "bullish"
+    if last < e20 < e50: return "bearish"
     return "neutral"
 
 
-def pct_from_52w_high(closes: List[float]) -> float:
+def pct_from_52w(closes: List[float]) -> float:
     hi = max(closes[-min(252, len(closes)):])
-    if hi == 0:
-        return 0.0
+    if hi == 0: return 0.0
     return round((closes[-1] - hi) / hi * 100, 1)
 
 
-def tightness(closes: List[float], window: int = 15) -> float:
-    win = closes[-window:] if len(closes) >= window else closes
-    if not win or max(win) == 0:
-        return 1.0
+def tightness(closes: List[float], w: int = 15) -> float:
+    win = closes[-w:] if len(closes) >= w else closes
+    if not win or max(win) == 0: return 1.0
     return (max(win) - min(win)) / max(win)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PATTERN SCORERS
 # ─────────────────────────────────────────────────────────────────────────────
-def score_cup_handle(closes, vols) -> int:
-    if len(closes) < 40:
-        return 0
-    win = closes[-40:]
-    lo_idx = int(np.argmin(win))
-    if lo_idx < 5 or lo_idx > 32:
-        return 15
-    lo = win[lo_idx]
-    left_peak = max(win[:lo_idx])
-    right_sec = win[lo_idx:]
-    right_peak = max(right_sec)
-    last = closes[-1]
-    depth = (left_peak - lo) / left_peak if left_peak > 0 else 0
-    if not (0.12 <= depth <= 0.35):
-        return 20
-    recovery = (right_peak - lo) / (left_peak - lo) if left_peak > lo else 0
-    handle_pb = (right_peak - last) / right_peak if right_peak > 0 else 0
-    score = 45
-    if recovery >= 0.85: score += 20
-    if recovery >= 0.95: score += 5
-    if 0.02 <= handle_pb <= 0.12: score += 15
-    if last > left_peak * 0.97: score += 10
-    if len(vols) >= 20:
-        if np.mean(vols[-5:]) < np.mean(vols[-20:-5]) * 0.85: score += 5
-    return min(score, 95)
+def score_cup_handle(c, v) -> int:
+    if len(c) < 40: return 0
+    win = c[-40:]; lo_idx = int(np.argmin(win))
+    if lo_idx < 5 or lo_idx > 32: return 15
+    lo = win[lo_idx]; lp = max(win[:lo_idx]); rp = max(win[lo_idx:]); last = c[-1]
+    depth = (lp - lo) / lp if lp > 0 else 0
+    if not (0.12 <= depth <= 0.35): return 20
+    recovery = (rp - lo) / (lp - lo) if lp > lo else 0
+    handle_pb = (rp - last) / rp if rp > 0 else 0
+    s = 45
+    if recovery >= 0.85: s += 20
+    if recovery >= 0.95: s += 5
+    if 0.02 <= handle_pb <= 0.12: s += 15
+    if last > lp * 0.97: s += 10
+    if len(v) >= 20 and np.mean(v[-5:]) < np.mean(v[-20:-5]) * 0.85: s += 5
+    return min(s, 95)
 
 
-def score_double_bottom(closes, vols) -> int:
-    if len(closes) < 30:
-        return 0
-    win = closes[-30:]
-    mid = len(win) // 2
-    lo1 = min(win[:mid])
-    lo2 = min(win[mid:])
-    if lo1 == 0 or lo2 == 0:
-        return 0
-    neckline = max(win[mid - 4:mid + 4]) if mid >= 4 else max(win)
-    last = closes[-1]
-    similarity = 1 - abs(lo1 - lo2) / ((lo1 + lo2) / 2)
-    if similarity < 0.90:
-        return 15
-    score = 45
-    if similarity >= 0.97: score += 15
-    elif similarity >= 0.93: score += 8
-    if last > neckline: score += 20
-    if last > lo2 * 1.05: score += 10
-    if len(vols) >= 10:
-        if np.mean(vols[-5:]) > np.mean(vols[-20:-5]) * 1.1: score += 5
-    return min(score, 92)
+def score_double_bottom(c, v) -> int:
+    if len(c) < 30: return 0
+    win = c[-30:]; mid = len(win) // 2
+    lo1 = min(win[:mid]); lo2 = min(win[mid:])
+    if lo1 == 0 or lo2 == 0: return 0
+    neck = max(win[mid-4:mid+4]) if mid >= 4 else max(win)
+    last = c[-1]
+    sim = 1 - abs(lo1 - lo2) / ((lo1 + lo2) / 2)
+    if sim < 0.90: return 15
+    s = 45
+    if sim >= 0.97: s += 15
+    elif sim >= 0.93: s += 8
+    if last > neck: s += 20
+    if last > lo2 * 1.05: s += 10
+    if len(v) >= 10 and np.mean(v[-5:]) > np.mean(v[-20:-5]) * 1.1: s += 5
+    return min(s, 92)
 
 
-def score_ipo_base(closes, listing_age) -> int:
-    if listing_age > 730 or len(closes) < 15:
-        return 0
-    win = closes[-25:] if len(closes) >= 25 else closes
-    peak = max(win); lo = min(win); last = closes[-1]
-    depth = (peak - lo) / peak if peak > 0 else 1.0
-    if depth > 0.30:
-        return 15
-    score = 50
-    if depth < 0.15: score += 15
-    if depth < 0.10: score += 5
-    if last > peak * 0.93: score += 15
-    if last > peak * 0.98: score += 5
-    if listing_age < 365: score += 5
-    if tightness(closes[-15:] if len(closes) >= 15 else closes) < 0.08: score += 5
-    return min(score, 90)
+def score_ipo_base(c, listing_age) -> int:
+    if listing_age > 730 or len(c) < 15: return 0
+    win = c[-25:] if len(c) >= 25 else c
+    pk = max(win); lo = min(win); last = c[-1]
+    depth = (pk - lo) / pk if pk > 0 else 1.0
+    if depth > 0.30: return 15
+    s = 50
+    if depth < 0.15: s += 15
+    if depth < 0.10: s += 5
+    if last > pk * 0.93: s += 15
+    if last > pk * 0.98: s += 5
+    if listing_age < 365: s += 5
+    if tightness(c[-15:] if len(c) >= 15 else c) < 0.08: s += 5
+    return min(s, 90)
 
 
-def score_momentum(closes, vols) -> int:
-    if len(closes) < 55:
-        return 0
-    e20 = ema_val(closes, 20)
-    e50 = ema_val(closes, 50)
-    if e20 is None or e50 is None:
-        return 0
-    last = closes[-1]
-    pct_hi = pct_from_52w_high(closes)
-    r = rsi_wilder(closes)
-    score = 25
-    if last > e20: score += 15
-    if e20 > e50: score += 15
-    if pct_hi >= -5: score += 15
-    elif pct_hi >= -10: score += 8
-    if r and 55 <= r <= 75: score += 12
-    elif r and r > 75: score += 3
-    if len(vols) >= 5:
-        vr = vol_ratio_fn(vols)
-        if vr >= 1.5: score += 10
-        elif vr >= 1.2: score += 5
-    return min(score, 92)
+def score_momentum(c, v) -> int:
+    if len(c) < 55: return 0
+    e20 = ema_val(c, 20); e50 = ema_val(c, 50)
+    if None in (e20, e50): return 0
+    last = c[-1]; pct_hi = pct_from_52w(c); r = rsi_wilder(c)
+    s = 25
+    if last > e20: s += 15
+    if e20 > e50: s += 15
+    if pct_hi >= -5: s += 15
+    elif pct_hi >= -10: s += 8
+    if r and 55 <= r <= 75: s += 12
+    elif r and r > 75: s += 3
+    if len(v) >= 5:
+        vr = vol_ratio_fn(v)
+        if vr >= 1.5: s += 10
+        elif vr >= 1.2: s += 5
+    return min(s, 92)
 
 
-def score_flat_base(closes, vols) -> int:
-    if len(closes) < 30:
-        return 0
-    base_win = closes[-25:]
-    peak = max(base_win); lo = min(base_win); last = closes[-1]
-    band = (peak - lo) / peak if peak > 0 else 1.0
-    if band > 0.15:
-        return 20
-    score = 50
-    if band < 0.10: score += 15
-    if band < 0.07: score += 8
-    if last > (peak + lo) / 2: score += 10
-    if last > peak * 0.97: score += 5
-    if len(closes) >= 50:
-        prior = np.mean(closes[-50:-25])
-        if prior < lo: score += 5
-    if len(vols) >= 25:
-        if np.mean(vols[-25:]) < np.mean(vols[-50:-25] if len(vols) >= 50 else vols[:-25]) * 0.8:
-            score += 7
-    return min(score, 88)
+def score_flat_base(c, v) -> int:
+    if len(c) < 30: return 0
+    win = c[-25:]; pk = max(win); lo = min(win); last = c[-1]
+    band = (pk - lo) / pk if pk > 0 else 1.0
+    if band > 0.15: return 20
+    s = 50
+    if band < 0.10: s += 15
+    if band < 0.07: s += 8
+    if last > (pk + lo) / 2: s += 10
+    if last > pk * 0.97: s += 5
+    if len(c) >= 50 and np.mean(c[-50:-25]) < lo: s += 5
+    if len(v) >= 25:
+        bv = np.mean(v[-25:])
+        pv = np.mean(v[-50:-25]) if len(v) >= 50 else np.mean(v[:-25])
+        if pv > 0 and bv < pv * 0.8: s += 7
+    return min(s, 88)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DATA FETCHING (synchronous — called from thread pool)
+# ANALYZE A SINGLE STOCK
 # ─────────────────────────────────────────────────────────────────────────────
-def fetch_and_analyze(entry: tuple) -> Optional[dict]:
-    yf_sym, disp, company, sector, cap, listing_age = entry
-    try:
-        ticker = yf.Ticker(yf_sym)
-        hist = ticker.history(period="1y", interval="1d", auto_adjust=True)
-        if hist is None or hist.empty or len(hist) < 20:
-            return None
-        closes  = [float(x) for x in hist["Close"].tolist()]
-        highs   = [float(x) for x in hist["High"].tolist()]
-        lows    = [float(x) for x in hist["Low"].tolist()]
-        volumes = [float(x) for x in hist["Volume"].tolist()]
-
-        last   = closes[-1]
-        prev   = closes[-2] if len(closes) >= 2 else last
-        chg    = (last - prev) / prev * 100 if prev else 0.0
-        r      = rsi_wilder(closes) or 50.0
-        vr     = vol_ratio_fn(volumes)
-        trend  = trend_signal(closes)
-        pct_hi = pct_from_52w_high(closes)
-        mh     = macd_hist(closes)
-        tight  = tightness(closes)
-
-        scores = {
-            "cup":  score_cup_handle(closes, volumes),
-            "dbl":  score_double_bottom(closes, volumes),
-            "ipo":  score_ipo_base(closes, listing_age),
-            "mom":  score_momentum(closes, volumes),
-            "flat": score_flat_base(closes, volumes),
-        }
-        return {
-            "symbol":             disp,
-            "company":            company,
-            "sector":             sector,
-            "cap":                cap,
-            "price":              round(last, 2),
-            "change_pct":         round(chg, 2),
-            "rsi":                round(r, 1),
-            "vol_ratio":          round(vr, 2),
-            "trend":              trend,
-            "pct_from_52w_high":  pct_hi,
-            "macd_bull":          mh is not None and mh > 0,
-            "tightness":          round(tight, 3),
-            "scores":             scores,
-            "listing_age_days":   listing_age,
-        }
-    except Exception as e:
-        log.warning(f"fetch_and_analyze failed for {yf_sym}: {e}")
+def analyze_stock(yf_sym: str, disp: str, company: str, sector: str, cap: str, listing_age: int) -> Optional[dict]:
+    df = fetch_ohlcv(yf_sym)
+    if df is None or len(df) < 20:
         return None
+    closes  = df["Close"].tolist()
+    highs   = df["High"].tolist()
+    lows    = df["Low"].tolist()
+    volumes = df["Volume"].tolist()
+    last    = float(closes[-1])
+    prev    = float(closes[-2]) if len(closes) >= 2 else last
+    chg     = (last - prev) / prev * 100 if prev else 0.0
+
+    r     = rsi_wilder(closes) or 50.0
+    vr    = vol_ratio_fn(volumes)
+    trend = trend_signal(closes)
+    pcthi = pct_from_52w(closes)
+    mbull = macd_bullish(closes)
+    tight = tightness(closes)
+
+    scores = {
+        "cup":  score_cup_handle(closes, volumes),
+        "dbl":  score_double_bottom(closes, volumes),
+        "ipo":  score_ipo_base(closes, listing_age),
+        "mom":  score_momentum(closes, volumes),
+        "flat": score_flat_base(closes, volumes),
+    }
+    return {
+        "symbol": disp, "company": company, "sector": sector, "cap": cap,
+        "price": round(last, 2), "change_pct": round(chg, 2),
+        "rsi": round(r, 1), "vol_ratio": round(vr, 2),
+        "trend": trend, "pct_from_52w_high": pcthi,
+        "macd_bull": mbull, "tightness": round(tight, 3),
+        "scores": scores, "listing_age_days": listing_age,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GLOBAL CACHE  (populated by background thread)
+# BACKGROUND CACHE
 # ─────────────────────────────────────────────────────────────────────────────
-_cache_lock = threading.Lock()
+_lock = threading.Lock()
 _cache: List[dict] = []
 _cache_ts: float = 0.0
-_cache_building: bool = False
-CACHE_TTL = 300  # 5 minutes
+_building = False
+CACHE_TTL = 300
 
 
-def _build_cache_sync():
-    """Runs in a background thread. Fetches all stocks and updates global cache."""
-    global _cache, _cache_ts, _cache_building
-    log.info(f"Background cache build started — {len(UNIVERSE)} stocks")
+def _build():
+    global _cache, _cache_ts, _building
+    log.info(f"Building universe cache for {len(UNIVERSE)} stocks…")
+    # Prime Yahoo session cookie first
+    try: _session.get("https://finance.yahoo.com/", timeout=10)
+    except Exception: pass
+    get_crumb()
+
     results = []
     for entry in UNIVERSE:
         try:
-            r = fetch_and_analyze(entry)
+            r = analyze_stock(*entry)
             if r:
                 results.append(r)
+                log.info(f"  ✓ {entry[1]} ({len(results)} done)")
         except Exception as e:
-            log.warning(f"Skipping {entry[0]}: {e}")
-    with _cache_lock:
-        _cache = results
-        _cache_ts = time.time()
-        _cache_building = False
-    log.info(f"Cache built: {len(results)}/{len(UNIVERSE)} stocks OK")
+            log.warning(f"  ✗ {entry[1]}: {e}")
+    with _lock:
+        if results:  # only update if we got data
+            _cache = results
+            _cache_ts = time.time()
+        _building = False
+    log.info(f"Cache complete: {len(results)}/{len(UNIVERSE)} stocks")
 
 
-def trigger_cache_refresh():
-    """Spawn background thread to refresh cache if stale."""
-    global _cache_building
-    with _cache_lock:
-        if _cache_building:
-            return
-        _cache_building = True
-    t = threading.Thread(target=_build_cache_sync, daemon=True)
-    t.start()
+def trigger_refresh():
+    global _building
+    with _lock:
+        if _building: return
+        _building = True
+    threading.Thread(target=_build, daemon=True).start()
 
 
-def get_cache() -> List[dict]:
-    with _cache_lock:
-        return list(_cache)
-
-
-def cache_age() -> float:
-    with _cache_lock:
-        return time.time() - _cache_ts if _cache_ts else float("inf")
-
-
-def cache_count() -> int:
-    with _cache_lock:
-        return len(_cache)
+def get_cache():
+    with _lock: return list(_cache)
+def cache_age():
+    with _lock: return time.time() - _cache_ts if _cache_ts else float("inf")
+def cache_count():
+    with _lock: return len(_cache)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STRATEGY METADATA
+# STRATEGY CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
 STRATEGY_IDS = ["cup", "dbl", "ipo", "mom", "flat"]
 STRATEGY_META = {
@@ -423,110 +494,94 @@ STRATEGY_META = {
 }
 
 
-def calc_levels(price: float, strat_id: str) -> dict:
-    m = STRATEGY_META[strat_id]
-    return {
-        "entry":    round(price, 2),
-        "target":   round(price * (1 + m["tgt_pct"]), 2),
-        "stop":     round(price * (1 - m["stop_pct"]), 2),
-        "tgt_pct":  round(m["tgt_pct"] * 100, 1),
-        "stop_pct": round(m["stop_pct"] * 100, 1),
-    }
+def calc_levels(price, sid):
+    m = STRATEGY_META[sid]
+    return {"entry": round(price,2), "target": round(price*(1+m["tgt_pct"]),2),
+            "stop": round(price*(1-m["stop_pct"]),2),
+            "tgt_pct": round(m["tgt_pct"]*100,1), "stop_pct": round(m["stop_pct"]*100,1)}
 
 
-def build_reasoning(s: dict, strat_id: str) -> List[str]:
-    r = []
-    meta = STRATEGY_META[strat_id]
-    rsi_v = s["rsi"]; vr = s["vol_ratio"]; trend = s["trend"]
-    pct_hi = s["pct_from_52w_high"]; macd_bull = s["macd_bull"]
-
-    if strat_id == "cup":
-        r.append(f"<b>Cup & Handle</b> — rounded base forming with U-shaped recovery")
+def build_reasoning(s: dict, sid: str) -> List[str]:
+    r = []; m = STRATEGY_META[sid]
+    rv = s["rsi"]; vr = s["vol_ratio"]; trend = s["trend"]
+    phi = s["pct_from_52w_high"]; mb = s["macd_bull"]
+    if sid == "cup":
+        r.append(f"<b>Cup & Handle</b> — rounded base with handle pullback near pivot")
         r.append(f"Fit score <b>{s['scores']['cup']}/100</b>")
         if vr >= 1.5: r.append(f"Volume <b>{vr:.1f}×</b> 20-day avg — strong accumulation")
         elif vr >= 1.2: r.append(f"Volume <b>{vr:.1f}×</b> — healthy buying interest")
-        if 55 <= rsi_v <= 75: r.append(f"RSI <b>{rsi_v}</b> — power zone, upside room")
+        if 55 <= rv <= 75: r.append(f"RSI (Wilder) <b>{rv}</b> — power zone, upside room")
         if trend == "bullish": r.append("Trend: <b>Bullish</b> — Price > EMA20 > EMA50")
-        if macd_bull: r.append("MACD <b>above signal</b> — momentum expanding")
-        if pct_hi >= -5: r.append(f"<b>{abs(pct_hi):.1f}%</b> from 52-week high — nearing breakout")
-        r.append(f"Target: +{int(meta['tgt_pct']*100)}% · Stop: -{int(meta['stop_pct']*100)}% · R/R: <b>{meta['rr']}×</b>")
-    elif strat_id == "dbl":
-        r.append(f"<b>Double Bottom (W)</b> — two lows at same support level")
+        if mb: r.append("MACD <b>above signal</b> — momentum expanding")
+        if phi >= -5: r.append(f"<b>{abs(phi):.1f}%</b> from 52-week high — nearing breakout zone")
+        r.append(f"Target: +{int(m['tgt_pct']*100)}% · Stop: -{int(m['stop_pct']*100)}% · R/R: <b>{m['rr']}×</b>")
+    elif sid == "dbl":
+        r.append(f"<b>Double Bottom (W)</b> — two lows at same support")
         r.append(f"Fit score <b>{s['scores']['dbl']}/100</b>")
-        if rsi_v < 45: r.append(f"RSI <b>{rsi_v}</b> — bullish divergence potential")
-        else: r.append(f"RSI <b>{rsi_v}</b> — momentum turning higher")
-        if vr >= 1.3: r.append(f"Volume <b>{vr:.1f}×</b> — neckline breakout validated")
-        if macd_bull: r.append("MACD crossover <b>bullish</b>")
+        if rv < 45: r.append(f"RSI <b>{rv}</b> — bullish divergence potential")
+        else: r.append(f"RSI <b>{rv}</b> — momentum turning higher")
+        if vr >= 1.3: r.append(f"Volume <b>{vr:.1f}×</b> — neckline break validated")
+        if mb: r.append("MACD crossover <b>bullish</b>")
         if trend == "bullish": r.append("Primary trend: <b>Bullish</b>")
-        r.append(f"Target: +{int(meta['tgt_pct']*100)}% · Stop: -{int(meta['stop_pct']*100)}% · R/R: <b>{meta['rr']}×</b>")
-    elif strat_id == "ipo":
+        r.append(f"Target: +{int(m['tgt_pct']*100)}% · Stop: -{int(m['stop_pct']*100)}% · R/R: <b>{m['rr']}×</b>")
+    elif sid == "ipo":
         r.append(f"<b>First IPO Base</b> — institutional accumulation post listing")
         r.append(f"Listed ~{s['listing_age_days']} days ago")
-        r.append(f"Fit score <b>{s['scores']['ipo']}/100</b> — tight coil")
-        if trend == "bullish": r.append("Primary uptrend intact — first bases = explosive moves")
+        r.append(f"Fit score <b>{s['scores']['ipo']}/100</b>")
+        if trend == "bullish": r.append("Primary uptrend intact — first bases deliver explosive moves")
         if s["tightness"] < 0.10: r.append(f"Range: <b>{s['tightness']*100:.1f}%</b> — very tight base")
-        r.append(f"RSI <b>{rsi_v}</b> · Target: +{int(meta['tgt_pct']*100)}% · R/R: <b>{meta['rr']}×</b>")
-    elif strat_id == "mom":
+        r.append(f"RSI <b>{rv}</b> · Target: +{int(m['tgt_pct']*100)}% · R/R: <b>{m['rr']}×</b>")
+    elif sid == "mom":
         r.append(f"<b>Momentum Breakout</b> — clearing multi-month resistance")
         r.append(f"Fit score <b>{s['scores']['mom']}/100</b>")
-        r.append(f"{'At 52-week high' if pct_hi >= -2 else f'{abs(pct_hi):.1f}% from 52-week high'}")
-        if 55 <= rsi_v <= 75: r.append(f"RSI <b>{rsi_v}</b> — momentum power zone (55–75)")
-        elif rsi_v > 75: r.append(f"RSI <b>{rsi_v}</b> — extended; pullback to EMA20 ideal entry")
+        r.append(f"{'At 52-week high ▲' if phi >= -2 else f'{abs(phi):.1f}% from 52-week high'}")
+        if 55 <= rv <= 75: r.append(f"RSI <b>{rv}</b> — momentum power zone (55–75)")
+        elif rv > 75: r.append(f"RSI <b>{rv}</b> — extended; pullback to EMA20 ideal entry")
         if vr >= 1.5: r.append(f"Volume surge <b>{vr:.1f}×</b> — institutional conviction")
-        if macd_bull: r.append("MACD <b>bullish</b> — histogram expanding")
-        r.append(f"Target: +{int(meta['tgt_pct']*100)}% · Trailing stop · R/R: <b>{meta['rr']}×</b>")
+        if mb: r.append("MACD <b>bullish</b> — histogram expanding")
+        r.append(f"Target: +{int(m['tgt_pct']*100)}% · Trailing stop · R/R: <b>{m['rr']}×</b>")
     else:
         r.append(f"<b>Flat Base / Darvas Box</b> — tight consolidation on prior rally")
         r.append(f"Fit score <b>{s['scores']['flat']}/100</b> · Range: <b>{s['tightness']*100:.1f}%</b>")
-        if vr < 0.9: r.append(f"Volume drying up (<b>{vr:.1f}×</b>) — healthy base in progress")
+        if vr < 0.9: r.append(f"Volume drying up (<b>{vr:.1f}×</b>) — healthy base building")
         elif vr >= 1.3: r.append(f"Volume <b>{vr:.1f}×</b> — quiet accumulation visible")
         if trend == "bullish": r.append("Built on <b>bullish</b> EMAs — constructive")
-        if macd_bull: r.append("MACD positive — underlying momentum intact")
-        r.append(f"Target: +{int(meta['tgt_pct']*100)}% · Stop: box floor · R/R: <b>{meta['rr']}×</b>")
+        if mb: r.append("MACD positive — underlying momentum intact")
+        r.append(f"Target: +{int(m['tgt_pct']*100)}% · Stop: box floor · R/R: <b>{m['rr']}×</b>")
     return r
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FASTAPI
 # ─────────────────────────────────────────────────────────────────────────────
-app = FastAPI(title="SWING Terminal", version="3.0")
+app = FastAPI(title="SWING Terminal", version="4.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @app.on_event("startup")
 async def startup():
-    log.info("App startup — triggering background cache build")
-    trigger_cache_refresh()
+    log.info("Startup — triggering background cache build")
+    trigger_refresh()
 
 
 @app.get("/")
 async def root():
-    index = FRONTEND_DIR / "index.html"
-    if index.exists():
-        return FileResponse(str(index))
-    return {"status": "ok", "version": "3.0"}
+    idx = FRONTEND_DIR / "index.html"
+    return FileResponse(str(idx)) if idx.exists() else {"version": "4.0"}
 
 
 @app.get("/api/health")
 async def health():
-    return {
-        "ok": True,
-        "universe_cached": cache_count(),
-        "cache_age_s": round(cache_age(), 0) if cache_count() > 0 else None,
-        "building": _cache_building,
-    }
+    return {"ok": True, "universe_cached": cache_count(),
+            "cache_age_s": round(cache_age(), 0) if cache_count() > 0 else None, "building": _building}
 
 
 @app.get("/api/status")
 async def status():
-    return {
-        "stocks_cached": cache_count(),
-        "cache_age_s": round(cache_age(), 0) if cache_count() > 0 else None,
-        "building": _cache_building,
-        "ready": cache_count() > 0,
-    }
+    cnt = cache_count()
+    return {"stocks_cached": cnt, "cache_age_s": round(cache_age(), 0) if cnt > 0 else None,
+            "building": _building, "ready": cnt > 0}
 
 
 @app.get("/api/strategies")
@@ -554,51 +609,33 @@ class ScanParams(BaseModel):
 async def scan(params: ScanParams):
     if params.strategy not in STRATEGY_IDS:
         raise HTTPException(400, f"Unknown strategy: {params.strategy}")
-
-    # If cache is empty, wait up to 25s for background build
-    waited = 0
-    while cache_count() == 0 and waited < 25:
+    # Wait up to 25s for first build
+    for _ in range(13):
+        if cache_count() > 0: break
         await asyncio.sleep(2)
-        waited += 2
-
     stocks = get_cache()
     if not stocks:
-        # Cache still empty — trigger refresh and return friendly error
-        trigger_cache_refresh()
-        raise HTTPException(503, "Data still loading. The server just woke up — try again in 30 seconds.")
-
-    # Refresh cache in background if stale
+        trigger_refresh()
+        raise HTTPException(503, "Data still loading. Server just woke up — try again in 30 seconds.")
     if cache_age() > CACHE_TTL:
-        trigger_cache_refresh()
+        trigger_refresh()
 
     meta = STRATEGY_META[params.strategy]
     results = []
     for s in stocks:
         score = s["scores"].get(params.strategy, 0)
-        if score < max(params.min_score, 35):
-            continue
-        if params.cap != "any" and s["cap"] != params.cap:
-            continue
-        if params.sector != "any" and s["sector"] != params.sector:
-            continue
-        if params.min_rr > 0 and meta["rr"] < params.min_rr:
-            continue
-        if params.trend != "any" and s["trend"] != params.trend:
-            continue
-        if params.volume_confirmed and s["vol_ratio"] < 1.3:
-            continue
-        levels    = calc_levels(s["price"], params.strategy)
-        reasoning = build_reasoning(s, params.strategy)
+        if score < max(params.min_score, 35): continue
+        if params.cap != "any" and s["cap"] != params.cap: continue
+        if params.sector != "any" and s["sector"] != params.sector: continue
+        if params.min_rr > 0 and meta["rr"] < params.min_rr: continue
+        if params.trend != "any" and s["trend"] != params.trend: continue
+        if params.volume_confirmed and s["vol_ratio"] < 1.3: continue
         results.append({**s, "fit_score": score, "strategy_meta": meta,
-                        "levels": levels, "reasoning": reasoning})
-
+                        "levels": calc_levels(s["price"], params.strategy),
+                        "reasoning": build_reasoning(s, params.strategy)})
     results.sort(key=lambda x: x["fit_score"], reverse=True)
-    return {
-        "strategy":       params.strategy,
-        "count":          len(results),
-        "total_analyzed": len(stocks),
-        "results":        results[:30],
-    }
+    return {"strategy": params.strategy, "count": len(results),
+            "total_analyzed": len(stocks), "results": results[:30]}
 
 
 if __name__ == "__main__":
