@@ -267,7 +267,7 @@ def macd_bullish(closes: List[float]) -> bool:
     if len(ml) < 9: return False
     sig = np.mean(ml[-9:])
     for m in ml[-9:]: sig = m*k9 + sig*(1-k9)
-    return ml[-1] > sig
+    return bool(ml[-1] > sig)
 
 
 def vol_ratio_fn(volumes: List[float]) -> float:
@@ -422,11 +422,11 @@ def analyze_stock(yf_sym: str, disp: str, company: str, sector: str, cap: str, l
     }
     return {
         "symbol": disp, "company": company, "sector": sector, "cap": cap,
-        "price": round(last, 2), "change_pct": round(chg, 2),
-        "rsi": round(r, 1), "vol_ratio": round(vr, 2),
-        "trend": trend, "pct_from_52w_high": pcthi,
-        "macd_bull": mbull, "tightness": round(tight, 3),
-        "scores": scores, "listing_age_days": listing_age,
+        "price": float(round(last, 2)), "change_pct": float(round(chg, 2)),
+        "rsi": float(round(r, 1)), "vol_ratio": float(round(vr, 2)),
+        "trend": str(trend), "pct_from_52w_high": float(pcthi),
+        "macd_bull": bool(mbull), "tightness": float(round(tight, 3)),
+        "scores": {k: int(v) for k, v in scores.items()}, "listing_age_days": int(listing_age),
     }
 
 
@@ -619,7 +619,10 @@ async def debug():
         score = s["scores"].get(sid, 0)
         levels = calc_levels(s["price"], sid)
         reasoning = build_reasoning(s, sid)
-        return {"ok": True, "stock": s, "score": score, "levels": levels, "reasoning": reasoning}
+        # Deep cleanse numpy types
+        res = {"ok": True, "stock": s, "score": score, "levels": levels, "reasoning": reasoning}
+        import json
+        return json.loads(json.dumps(res, default=lambda x: float(x) if isinstance(x, (np.float64, np.float32)) else int(x) if isinstance(x, (np.int64, np.int32)) else str(x)))
     except Exception as e:
         return {"ok": False, "error": str(e), "trace": traceback.format_exc(), "stock": s}
 
@@ -655,8 +658,10 @@ async def scan(params: ScanParams):
                             "levels": calc_levels(s["price"], params.strategy),
                             "reasoning": build_reasoning(s, params.strategy)})
         results.sort(key=lambda x: x["fit_score"], reverse=True)
-        return {"strategy": params.strategy, "count": len(results),
+        res = {"strategy": params.strategy, "count": len(results),
                 "total_analyzed": len(stocks), "results": results[:30]}
+        import json
+        return json.loads(json.dumps(res, default=lambda x: float(x) if isinstance(x, (np.float64, np.float32)) else int(x) if isinstance(x, (np.int64, np.int32)) else str(x)))
     except Exception as e:
         tb = traceback.format_exc()
         log.error(f"Scan crash: {e}\n{tb}")
