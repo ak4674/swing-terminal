@@ -92,7 +92,7 @@
   .pattern-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,255,58,0.1);color:var(--accent);border:1px solid rgba(212,255,58,0.3);padding:4px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:14px 20px 0;align-self:flex-start}
   .pattern-badge::before{content:'◆';font-size:8px}
 
-  .card-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .card-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
   .metric{background:var(--bg-card);padding:12px;text-align:center}
   .metric-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
   .metric-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
@@ -240,7 +240,7 @@
   </div>
 
   <footer>
-    <span>Data · Live from NSE India · Cached 5 min · Refresh for latest</span>
+    <span>Data · <b>yfinance</b> (Yahoo Finance) · NSE stocks · Cached 5 min · Pattern heuristics v2</span>
     <span><b>Educational use only</b> · Verify on your broker · Not investment advice</span>
   </footer>
 
@@ -318,7 +318,7 @@ async function runScan(){
 
   const resultsEl = document.getElementById('results');
   resultsEl.innerHTML = `<div class="loading"><div class="spinner"></div>
-    <div class="loading-text">Fetching live NSE data · This may take 30–60s first time</div></div>`;
+    <div class="loading-text">Fetching live market data via yfinance · First scan ~20-40s · Cached 5 min after</div></div>`;
 
   try {
     const r = await fetch(API + '/api/scan', {
@@ -387,13 +387,20 @@ function renderResults(data){
           </div>
           <div class="metric">
             <div class="metric-label">Volume</div>
-            <div class="metric-value ${s.vol_ratio>=1.5?'green':''}">${s.vol_ratio.toFixed(1)}×</div>
+            <div class="metric-value ${s.vol_ratio>=1.5?'green':s.vol_ratio>=1.2?'accent':''}">${s.vol_ratio.toFixed(1)}×</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">52W Hi</div>
+            <div class="metric-value ${s.pct_from_52w_high>=-3?'green':s.pct_from_52w_high>=-10?'accent':'red'}">${s.pct_from_52w_high>=0?'AT HIGH':s.pct_from_52w_high.toFixed(1)+'%'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">MACD</div>
+            <div class="metric-value ${s.macd!==null&&s.macd_signal!==null&&s.macd>s.macd_signal?'green':'red'}">${s.macd!==null&&s.macd_signal!==null?(s.macd>s.macd_signal?'BULL':'BEAR'):'—'}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Trend</div>
             <div class="metric-value ${s.trend==='bullish'?'green':s.trend==='bearish'?'red':''}">${s.trend.slice(0,4).toUpperCase()}</div>
           </div>
-          <div class="metric">
             <div class="metric-label">R/R</div>
             <div class="metric-value accent">${s.strategy_meta.rr}×</div>
           </div>
