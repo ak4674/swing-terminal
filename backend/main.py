@@ -660,7 +660,7 @@ async def scan(params: ScanParams):
     except Exception as e:
         tb = traceback.format_exc()
         log.error(f"Scan crash: {e}\n{tb}")
-        raise HTTPException(500, detail=f"Scan error: {str(e)} | Traceback: {tb[:500]}
+        raise HTTPException(500, detail=f"Scan error: {str(e)} | Traceback: {tb[:500]}")
 
 
 if __name__ == "__main__":
