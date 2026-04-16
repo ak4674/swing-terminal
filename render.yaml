@@ -9,4 +9,6 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: REFRESH_DEPLOY
+        value: "1"
     healthCheckPath: /api/health
