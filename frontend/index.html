@@ -296,6 +296,13 @@ function formatPrice(p){
   return '₹' + Number(p).toLocaleString('en-IN',{maximumFractionDigits:2});
 }
 
+async function checkStatus(){
+  try {
+    const r = await fetch(API + '/api/status');
+    return await r.json();
+  } catch(e){ return null; }
+}
+
 async function runScan(){
   if(!selectedStrategy){
     document.getElementById('resultCount').innerHTML =
@@ -304,7 +311,7 @@ async function runScan(){
   }
   const btn = document.getElementById('searchBtn');
   btn.disabled = true;
-  btn.textContent = '⋯ Scanning NSE…';
+  btn.textContent = '⋯ Scanning…';
 
   const payload = {
     strategy: selectedStrategy,
@@ -317,8 +324,28 @@ async function runScan(){
   };
 
   const resultsEl = document.getElementById('results');
-  resultsEl.innerHTML = `<div class="loading"><div class="spinner"></div>
-    <div class="loading-text">Fetching live market data via yfinance · First scan ~20-40s · Cached 5 min after</div></div>`;
+
+  // Show live status while backend builds cache
+  const setLoadingMsg = (msg) => {
+    resultsEl.innerHTML = `<div class="loading"><div class="spinner"></div>
+      <div class="loading-text">${msg}</div></div>`;
+  };
+
+  setLoadingMsg('Connecting to market data server…');
+
+  // Poll status until ready (max 90s)
+  let waited = 0;
+  while(waited < 90){
+    const st = await checkStatus();
+    if(st && st.ready){
+      setLoadingMsg(`Data ready — ${st.stocks_cached} stocks cached · Running scan…`);
+      break;
+    }
+    const cached = st ? st.stocks_cached : 0;
+    setLoadingMsg(`Loading market data… ${cached > 0 ? cached + ' stocks done · ' : ''}server warming up (~30–60s first time)`);
+    await new Promise(res => setTimeout(res, 3000));
+    waited += 3;
+  }
 
   try {
     const r = await fetch(API + '/api/scan', {
@@ -326,6 +353,18 @@ async function runScan(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
+    if(r.status === 503){
+      const errData = await r.json().catch(()=>({detail:'Server warming up'}));
+      resultsEl.innerHTML = `<div class="error empty">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-title">Server warming up.</div>
+        <p>${errData.detail || 'Data is still loading in background.'}
+        <br><br><b style="color:var(--accent)">Wait 30 seconds and click Run Scan again.</b></p>
+      </div>`;
+      document.getElementById('resultCount').innerHTML =
+        '<span style="color:var(--amber)">Warming up — retry in 30s</span>';
+      return;
+    }
     if(!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     renderResults(data);
@@ -333,15 +372,16 @@ async function runScan(){
     resultsEl.innerHTML = `<div class="error empty">
       <div class="empty-icon">⚠</div>
       <div class="empty-title">Scan failed.</div>
-      <p>${e.message}. If this persists, NSE may be rate-limiting. Try again in 30s.</p>
+      <p>${e.message}. If this persists, try again in 30 seconds.</p>
     </div>`;
     document.getElementById('resultCount').innerHTML =
-      '<span style="color:var(--red)">Scan failed</span>';
+      '<span style="color:var(--red)">Scan failed — retry</span>';
   } finally {
     btn.disabled = false;
     btn.textContent = '▶ Run Live Scan';
   }
 }
+
 
 function renderResults(data){
   const resultsEl = document.getElementById('results');
