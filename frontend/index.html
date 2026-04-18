@@ -1,4 +1,14 @@
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SWING // Live NSE Pattern Terminal</title>
+<meta name="description" content="Neural pattern extraction terminal for NSE stocks. Real-time heuristic scanning for Cup & Handle, Double Bottom, IPO Base, Momentum Breakout, and Flat Base formations."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
   :root {
     --bg: #050506;
@@ -18,7 +28,7 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  
+
   body {
     background-color: var(--bg);
     color: var(--text);
@@ -29,10 +39,9 @@
     padding: clamp(16px, 4vw, 40px);
   }
 
-  /* --- Sci-Fi Grid Background --- */
   body::before {
     content: ''; position: fixed; inset: 0; z-index: -1;
-    background-image: 
+    background-image:
       linear-gradient(var(--border) 1px, transparent 1px),
       linear-gradient(90deg, var(--border) 1px, transparent 1px);
     background-size: 40px 40px;
@@ -40,7 +49,6 @@
     opacity: 0.3;
   }
 
-  /* --- Global Scanline Animation --- */
   @keyframes scanline {
     0% { transform: translateY(-100%); }
     100% { transform: translateY(100vh); }
@@ -55,7 +63,7 @@
 
   .container { max-width: 1600px; margin: 0 auto; position: relative; }
 
-  /* --- Header --- */
+  /* HEADER */
   header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 40px; padding-bottom: 24px;
@@ -63,60 +71,59 @@
     flex-wrap: wrap; gap: 24px;
   }
   .brand-block { display: flex; flex-direction: column; gap: 4px; }
-  .logo {
-    font-size: 32px; font-weight: 800; letter-spacing: -0.04em;
-    display: flex; align-items: center; gap: 12px;
-  }
+  .logo { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; display: flex; align-items: center; gap: 12px; }
   .logo-icon { width: 32px; height: 32px; background: var(--accent); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
   .tagline { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.3em; }
-  
+
   .status-hub {
     display: flex; gap: 32px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
     background: var(--panel); padding: 12px 24px; border-radius: 100px; border: 1px solid var(--border);
+    flex-wrap: wrap;
   }
   .status-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
   .status-item b { color: var(--text); }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
   .dot.active { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-  /* --- Control Grid --- */
+  /* LAYOUT */
   .dashboard {
-    display: grid; grid-template-columns: 320px 1fr; gap: 24px; margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
     align-items: start;
   }
 
-  /* --- Sidebar Strategies --- */
+  /* STRATEGY SIDEBAR */
   .strategy-col { display: flex; flex-direction: column; gap: 12px; }
   .section-label {
     font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+    text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
   }
   .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
   .strat-card {
     background: var(--panel); border: 1px solid var(--border); padding: 16px; border-radius: 12px;
-    cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative; overflow: hidden;
+    cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
   }
   .strat-card:hover { border-color: var(--border-bright); background: var(--panel-hover); transform: translateX(4px); }
   .strat-card.active { border-color: var(--accent); background: var(--accent-glow); }
-  .strat-card .id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
-  .strat-card .name { font-size: 18px; font-weight: 700; margin: 4px 0 8px; letter-spacing: -0.01em; }
+  .strat-card .sid { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
+  .strat-card .sname { font-size: 18px; font-weight: 700; margin: 4px 0 8px; letter-spacing: -0.01em; }
   .strat-metrics { display: flex; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
   .strat-metrics b { color: var(--text); }
 
-  /* --- Main Filter Panel --- */
+  /* FILTER PANEL */
   .filter-panel {
     background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
-    padding: 24px; position: relative; display: flex; flex-direction: column; gap: 24px;
+    padding: 24px; display: flex; flex-direction: column; gap: 24px;
     box-shadow: 0 20px 50px -20px rgba(0,0,0,0.5);
   }
   .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
-  
   .field { display: flex; flex-direction: column; gap: 8px; }
   .field label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.2em; }
-  
   select {
     background: #14141a; border: 1px solid var(--border); border-radius: 8px; color: var(--text);
     padding: 12px 16px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500;
@@ -125,160 +132,272 @@
   select:hover { border-color: var(--border-bright); }
   select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); }
 
-  .action-bar { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); pt: 24px; padding-top: 24px; }
-  
+  .action-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid var(--border); padding-top: 24px; gap: 16px; flex-wrap: wrap;
+  }
+  .scan-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.1em; }
+  .scan-info b { color: var(--accent); }
+  .btn-row { display: flex; gap: 12px; align-items: center; }
+
   .run-btn {
     background: var(--accent); color: #000; padding: 14px 40px; border-radius: 100px;
-    font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;
-    border: none; transition: all 0.3s; display: flex; align-items: center; gap: 12px;
-    position: relative; overflow: hidden;
+    font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em;
+    cursor: pointer; border: none; transition: all 0.3s; font-family: 'Outfit', sans-serif;
   }
   .run-btn:hover { transform: scale(1.02); box-shadow: 0 0 30px var(--accent-glow); }
-  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
-  .run-btn .icon { font-size: 18px; }
-  
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: grayscale(1); }
+
   .reset-btn {
     background: transparent; color: var(--text-dim); padding: 12px 24px; border-radius: 100px;
     border: 1px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 600;
-    transition: all 0.2s;
+    transition: all 0.2s; font-family: 'Outfit', sans-serif;
   }
   .reset-btn:hover { color: #fff; border-color: var(--text-faint); background: rgba(255,255,255,0.05); }
 
-  .scan-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.1em; }
-  .scan-info b { color: var(--accent); }
-
-  /* --- Chart Section --- */
+  /* CHART SECTION */
   .chart-section {
-    margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);
-    display: none; flex-direction: column; gap: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
   }
-  .chart-header { display: flex; justify-content: space-between; align-items: center; }
-  .chart-title { font-size: 20px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 12px; }
-  .chart-tag { background: var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
-  #chart-container { width: 100%; height: 400px; background: #000; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+  .chart-section.visible { display: flex; }
 
-  /* --- Results Cards --- */
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .chart-title-group { display: flex; align-items: center; gap: 12px; }
+  .chart-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  .chart-badge {
+    background: var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+  }
+  .chart-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .chart-status b { color: var(--green); }
+  .chart-loading {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #chart-wrap {
+    width: 100%;
+    height: 440px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: #000;
+    position: relative;
+  }
+  #chart-container {
+    width: 100%;
+    height: 100%;
+  }
+  .chart-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(0,0,0,0.85);
+    z-index: 10;
+  }
+  .chart-overlay.hidden { display: none; }
+  .chart-overlay-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+    text-align: center;
+  }
+
+  .pattern-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* RESULT CARDS */
   #results {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 24px;
     perspective: 1000px;
   }
-  
+
   .card {
-    background: rgba(20, 20, 26, 0.7);
+    background: rgba(20,20,26,0.7);
     backdrop-filter: blur(12px);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 24px;
-    position: relative;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex; flex-direction: column; gap: 20px;
-    animation: cardEntry 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: cardEntry 0.6s cubic-bezier(0.2,0.8,0.2,1) both;
     cursor: pointer;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
   }
-  @keyframes cardEntry { from { opacity: 0; transform: translateY(30px) rotateX(-5deg); filter: blur(10px); } to { opacity: 1; transform: translateY(0); filter: none; } }
-  
+  @keyframes cardEntry {
+    from { opacity: 0; transform: translateY(30px); filter: blur(8px); }
+    to   { opacity: 1; transform: translateY(0);    filter: none; }
+  }
   .card:hover {
-    border-color: var(--accent);
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8), 0 0 20px var(--accent-glow);
-    z-index: 10;
+    border-color: var(--border-bright);
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px -16px rgba(0,0,0,0.7);
   }
-  .card.active { border-color: var(--accent); box-shadow: 0 0 25px var(--accent-glow); }
+  .card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 30px var(--accent-glow);
+    transform: translateY(-6px);
+  }
 
   .card-top { display: flex; justify-content: space-between; align-items: start; }
   .ticker-box { display: flex; flex-direction: column; gap: 4px; }
   .sym { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-  .comp { font-size: 12px; color: var(--text-dim); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  
+  .comp { font-size: 12px; color: var(--text-dim); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .val-box { text-align: right; }
-  .cur-price { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; }
+  .cur-price { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; }
   .cur-chg { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; margin-top: 4px; }
   .cur-chg.pos { color: var(--green); }
   .cur-chg.neg { color: var(--red); }
 
   .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .badge {
-    background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 100px;
-    font-size: 9px; font-weight: 700; border: 1px solid var(--border); color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 4px 12px; border-radius: 100px; font-size: 9px;
+    font-weight: 700; border: 1px solid; text-transform: uppercase; letter-spacing: 0.1em;
   }
-  .badge.strat { background: var(--accent-glow); border-color: rgba(212,255,58,0.2); color: var(--accent); }
-  .badge.sector { color: var(--blue); }
+  .badge.strat { background: var(--accent-glow); border-color: rgba(212,255,58,0.3); color: var(--accent); }
+  .badge.sec   { background: rgba(0,217,255,0.08); border-color: rgba(0,217,255,0.2); color: var(--blue); }
+  .badge.cap   { background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--text-dim); }
 
   .metric-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 12px;
     background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; border: 1px solid var(--border);
   }
   .met-item { display: flex; flex-direction: column; gap: 4px; }
   .met-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; }
-  .met-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); }
+  .met-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; }
   .met-val.hi { color: var(--green); }
   .met-val.lo { color: var(--red); }
+  .met-val.neu { color: var(--text); }
 
   .analyst-box { background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border-left: 2px solid var(--accent); }
-  .analyst-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); text-transform: uppercase; mb: 8px; margin-bottom: 8px; }
+  .analyst-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
   .reasoning-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .reasoning-list li { font-size: 12px; line-height: 1.4; color: var(--text-dim); display: flex; gap: 8px; align-items: start; }
-  .reasoning-list li::before { content: '>'; color: var(--accent); font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .reasoning-list li::before { content: '>'; color: var(--accent); font-weight: 800; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
 
-  .trade-footer { 
-    margin-top: auto; padding-top: 16px; border-top: 1px dashed var(--border); 
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  .trade-footer {
+    padding-top: 16px; border-top: 1px dashed var(--border);
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
   }
   .trade-item { display: flex; flex-direction: column; gap: 4px; }
-  .trade-label { font-size: 8px; color: var(--text-faint); text-transform: uppercase; font-weight: 700; }
+  .trade-label { font-size: 8px; color: var(--text-faint); text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em; }
   .trade-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 800; }
-  .trade-val.entry { color: var(--blue); }
-  .trade-val.target { color: var(--green); }
-  .trade-val.stop { color: var(--red); }
+  .tv-entry  { color: var(--blue); }
+  .tv-target { color: var(--green); }
+  .tv-stop   { color: var(--red); }
 
-  .vitals-bar { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+  .vitals-bar { display: flex; align-items: center; gap: 12px; }
   .v-track { flex: 1; height: 3px; background: #000; border-radius: 10px; overflow: hidden; }
-  .v-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 1s ease; }
-  .v-score { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--accent); }
+  .v-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); }
+  .v-score { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; color: var(--accent); min-width: 48px; text-align: right; }
 
-  /* --- States --- */
+  /* STATES */
   .empty-state {
-    grid-column: 1 / -1; min-height: 400px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; text-align: center; gap: 20px;
-    border: 2px dashed var(--border); border-radius: 30px; background: rgba(255,255,255,0.01);
+    grid-column: 1/-1; min-height: 400px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 20px;
+    border: 2px dashed var(--border); border-radius: 30px;
+    background: rgba(255,255,255,0.01);
   }
-  .empty-icon { font-size: 64px; opacity: 0.1; }
-  .empty-text { font-size: 18px; color: var(--text-dim); max-width: 400px; }
-  
-  .loading-state { grid-column: 1 / -1; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
-  .orbit {
-    width: 60px; height: 60px; position: relative;
-    border: 2px solid var(--border); border-radius: 50%;
-    animation: spin 2s linear infinite;
-  }
-  .orbit::after { content: ''; position: absolute; top: 0; left: 50%; translate: -50% -50%; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 15px var(--accent); }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-icon { font-size: 56px; opacity: 0.1; }
+  .empty-title { font-size: 18px; font-weight: 700; color: var(--text-dim); }
+  .empty-text { font-size: 14px; color: var(--text-faint); max-width: 380px; line-height: 1.6; }
 
-  /* --- Footer --- */
+  .loading-state {
+    grid-column: 1/-1; min-height: 400px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  }
+  .orbit {
+    width: 60px; height: 60px;
+    border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 1.5s linear infinite;
+  }
+
+  /* FOOTER */
   footer {
     border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;
-    display: flex; justify-content: space-between; align-items: start; color: var(--text-faint);
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; line-height: 2;
+    display: flex; justify-content: space-between; align-items: start;
+    color: var(--text-faint); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.1em; line-height: 2; flex-wrap: wrap; gap: 24px;
   }
   footer b { color: var(--text-dim); }
 
-  /* --- Adaptive --- */
-  @media (max-width: 1024px) {
+  @media (max-width: 1100px) {
     .dashboard { grid-template-columns: 1fr; }
-    .strategy-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .strategy-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
   }
   @media (max-width: 600px) {
-    .container { padding: 0 10px; }
-    header { gap: 12px; }
-    .results { grid-template-columns: 1fr; }
+    #results { grid-template-columns: 1fr; }
+    .status-hub { gap: 16px; }
   }
 </style>
 </head>
 <body>
-
 <div class="container">
-  
+
+  <!-- HEADER -->
   <header>
     <div class="brand-block">
       <div class="logo">
@@ -288,23 +407,33 @@
       <div class="tagline">Neural Pattern Extraction Terminal</div>
     </div>
     <div class="status-hub">
-      <div class="status-item"><div class="dot active" id="dotM"></div>Market: <b id="marketStatus">...</b></div>
-      <div class="status-item"><div class="dot active" id="dotA"></div>Core: <b id="coreStatus">Syncing</b></div>
-      <div class="status-item">Cycle: <b id="clock">00:00:00</b></div>
+      <div class="status-item">
+        <div class="dot active" id="dotM"></div>
+        Market:&nbsp;<b id="marketStatus">...</b>
+      </div>
+      <div class="status-item">
+        <div class="dot" id="dotA"></div>
+        Core:&nbsp;<b id="coreStatus">Syncing</b>
+      </div>
+      <div class="status-item">Cycle:&nbsp;<b id="clock">00:00:00</b></div>
     </div>
   </header>
 
+  <!-- DASHBOARD GRID -->
   <div class="dashboard">
+
+    <!-- LEFT: Strategy Profiles -->
     <div class="strategy-col">
       <div class="section-label">Heuristic Profiles</div>
       <div id="strategyList">
-        <!-- Strats go here -->
-        <div style="color:var(--text-faint); font-family: 'JetBrains Mono', monospace; font-size: 11px;">Initializing...</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);">Initializing...</div>
       </div>
     </div>
 
+    <!-- RIGHT: Config + Chart -->
     <div class="filter-panel">
       <div class="section-label">Config &middot; Filter & Optimization</div>
+
       <div class="filter-grid">
         <div class="field">
           <label>Market Universe</label>
@@ -320,9 +449,9 @@
           <select id="fSector">
             <option value="any">All Channels</option>
             <option>Information Technology</option>
-            <option>Banking & Financials</option>
+            <option>Banking &amp; Financials</option>
             <option>Pharmaceuticals</option>
-            <option>Auto & Ancillaries</option>
+            <option>Auto &amp; Ancillaries</option>
             <option>FMCG</option>
             <option>Energy</option>
             <option>Metals</option>
@@ -352,39 +481,60 @@
 
       <div class="action-bar">
         <div class="scan-info" id="scanInfo">Ready for <b>Pattern Extraction</b></div>
-        <div style="display:flex; gap:16px;">
+        <div class="btn-row">
           <button class="reset-btn" id="resetBtn">System Reset</button>
-          <button class="run-btn" id="runBtn" disabled>
-            Execute Live Scan
-          </button>
+          <button class="run-btn" id="runBtn" disabled>Execute Live Scan</button>
         </div>
       </div>
 
+      <!-- ── CHART SECTION (below scan button) ── -->
       <div class="chart-section" id="chartSection">
         <div class="chart-header">
-          <div class="chart-title" id="chartTitle">SYSTEM::READY <span class="chart-tag">STANDBY</span></div>
-          <div class="tagline" id="chartStatus">Select entity to visualize formation</div>
+          <div class="chart-title-group">
+            <div class="chart-title" id="chartSymbol">SELECT ENTITY</div>
+            <div class="chart-badge" id="chartBadge">STANDBY</div>
+          </div>
+          <div class="chart-status" id="chartStatus">Click any stock card to visualize its formation</div>
         </div>
-        <div id="chart-container"></div>
+
+        <div id="chart-wrap">
+          <div id="chart-container"></div>
+          <div class="chart-overlay" id="chartOverlay">
+            <div class="spinner"></div>
+            <div class="chart-overlay-text" id="chartOverlayText">Chart loading...</div>
+          </div>
+        </div>
+
+        <div class="pattern-legend" id="patternLegend" style="display:none;">
+          <div class="legend-item"><div class="legend-dot" style="background:#00ff88;"></div>Bullish Candle</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ff3366;"></div>Bearish Candle</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d4ff3a;"></div>Pattern Formation</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#00d9ff;"></div>Entry Zone</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(255,204,0,0.6);"></div>Target / Stop</div>
+        </div>
       </div>
+      <!-- ── END CHART SECTION ── -->
+
     </div>
   </div>
 
+  <!-- RESULTS -->
   <div class="section-label" style="margin-bottom:24px;">Extracted Entities</div>
-  <div class="results" id="results">
+  <div id="results">
     <div class="empty-state">
-      <div class="empty-icon">&plus;</div>
-      <div class="empty-text">Select a heuristic profile and execute the neural scan to extract current market entities.</div>
+      <div class="empty-icon">&#8853;</div>
+      <div class="empty-title">No Entities Extracted</div>
+      <div class="empty-text">Select a heuristic profile from the left panel, configure your filters, then execute the neural scan.</div>
     </div>
   </div>
 
   <footer>
-    <div style="max-width:300px">
+    <div>
       SYSTEM PROTOCOL v4.0.2<br>
       <b>AGENTIC ERA TRADING INTERFACE</b><br>
       Synchronized with Global Market Feeds.
     </div>
-    <div style="text-align:right">
+    <div style="text-align:right;">
       Data Source: Yahoo v8 Core &middot; Fallback: Stooq Internal<br>
       Latency: 12ms &middot; Cache TTL: 300s<br>
       <b>FOR DECISION SUPPORT ONLY</b>
@@ -394,153 +544,302 @@
 </div>
 
 <script>
+/* ─────────────────────────── STATE ─────────────────────────── */
 const API = '';
 let selectedStrategy = null;
+let currentScanStrategy = null;
 let strategies = [];
-let serverReady = false;
 let chart = null;
 let candleSeries = null;
-let volumeSeries = null;
-let annotationSeries = null;
+let volSeries = null;
+let markerSeries = null;
+let patternLineSeries = null;
+let chartInited = false;
 
-/* --- Charting Engine --- */
+/* ─────────────────────────── CHART ENGINE ─────────────────────────── */
 function initChart() {
+  if (chartInited) return;
   const container = document.getElementById('chart-container');
   chart = LightweightCharts.createChart(container, {
     layout: {
-      backgroundColor: '#000000',
+      background: { type: 'solid', color: '#000000' },
       textColor: '#8a8a95',
-      fontSize: 10,
-      fontFamily: 'JetBrains Mono',
+      fontSize: 11,
+      fontFamily: "'JetBrains Mono', monospace",
     },
     grid: {
-      vertLines: { color: '#1a1a22' },
-      horzLines: { color: '#1a1a22' },
+      vertLines: { color: '#111118' },
+      horzLines: { color: '#111118' },
     },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    rightPriceScale: { borderColor: '#1a1a22', scaleMargins: { top: 0.1, bottom: 0.2 } },
-    timeScale: { borderColor: '#1a1a22', timeVisible: true, secondsVisible: false },
+    rightPriceScale: {
+      borderColor: '#1a1a22',
+      scaleMargins: { top: 0.08, bottom: 0.22 },
+    },
+    timeScale: {
+      borderColor: '#1a1a22',
+      timeVisible: true,
+      secondsVisible: false,
+    },
+    handleScroll: true,
+    handleScale: true,
   });
 
   candleSeries = chart.addCandlestickSeries({
-    upColor: '#00ff88', downColor: '#ff3366', borderVisible: false,
-    wickUpColor: '#00ff88', wickDownColor: '#ff3366'
+    upColor: '#00ff88',
+    downColor: '#ff3366',
+    borderUpColor: '#00ff88',
+    borderDownColor: '#ff3366',
+    wickUpColor: '#00cc66',
+    wickDownColor: '#cc2244',
   });
 
-  volumeSeries = chart.addHistogramSeries({
-    color: '#1a1a22', priceFormat: { type: 'volume' },
-    priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }
+  volSeries = chart.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: 'vol',
+  });
+  chart.priceScale('vol').applyOptions({
+    scaleMargins: { top: 0.82, bottom: 0 },
   });
 
-  annotationSeries = chart.addLineSeries({
-    color: '#d4ff3a', lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Dashed,
-    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false
+  patternLineSeries = chart.addLineSeries({
+    color: '#d4ff3a',
+    lineWidth: 2,
+    lineStyle: LightweightCharts.LineStyle.Dashed,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: true,
+    crosshairMarkerRadius: 5,
+    crosshairMarkerBorderColor: '#d4ff3a',
+    crosshairMarkerBackgroundColor: '#d4ff3a',
   });
 
-  new ResizeObserver(entries => {
-    if (entries[0].contentRect) {
-      chart.applyOptions({ width: entries[0].contentRect.width, height: 400 });
+  new ResizeObserver(() => {
+    const wrap = document.getElementById('chart-wrap');
+    if (wrap && chart) {
+      chart.applyOptions({ width: wrap.clientWidth });
     }
-  }).observe(container);
+  }).observe(document.getElementById('chart-wrap'));
+
+  chartInited = true;
 }
 
 async function loadChart(symbol, strategy) {
-  document.getElementById('chartSection').style.display = 'flex';
-  document.getElementById('chartTitle').innerHTML = `${symbol} <span class="chart-tag">PATTERN ANALYZER</span>`;
-  document.getElementById('chartStatus').textContent = `Calculating ${strategy.toUpperCase()} formation landmarks...`;
-  
-  // Update active card
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-  const activeCard = Array.from(document.querySelectorAll('.card')).find(c => c.querySelector('.sym').textContent === symbol);
-  if(activeCard) activeCard.classList.add('active');
+  // Show the section
+  const section = document.getElementById('chartSection');
+  section.classList.add('visible');
+
+  // Mark card selected
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  const target = Array.from(document.querySelectorAll('.card'))
+    .find(c => c.dataset.symbol === symbol);
+  if (target) {
+    target.classList.add('selected');
+    // Smooth scroll to chart section inside panel
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Update header
+  document.getElementById('chartSymbol').textContent = symbol;
+  document.getElementById('chartBadge').textContent = strategy.toUpperCase() + ' ANALYSIS';
+  document.getElementById('chartStatus').innerHTML = `<div class="chart-loading"><div class="spinner"></div> Fetching OHLCV data & computing landmarks...</div>`;
+
+  // Show overlay
+  const overlay = document.getElementById('chartOverlay');
+  const overlayText = document.getElementById('chartOverlayText');
+  overlay.classList.remove('hidden');
+  overlayText.textContent = 'Loading chart data...';
+
+  initChart();
 
   try {
-    const r = await fetch(API + `/api/chart/${symbol}?strategy=${strategy}`);
-    const res = await r.json();
-    
-    candleSeries.setData(res.data);
-    volumeSeries.setData(res.data.map(d => ({ time: d.time, value: d.value, color: d.close > d.open ? 'rgba(0,255,136,0.1)' : 'rgba(255,51,102,0.1)' })));
-    
-    // Draw Landmarks
-    const pts = res.landmarks.points;
-    const highlightData = [];
-    
-    if (res.landmarks.type === 'cup') {
-      const idxs = [pts.left_peak, pts.bottom, pts.right_peak];
-      idxs.forEach(idx => { if(res.data[idx]) highlightData.push({ time: res.data[idx].time, value: res.data[idx].close }); });
-      document.getElementById('chartStatus').innerHTML = `Detected <b>Rounded Base</b> formation at ${res.data[pts.bottom].close.toFixed(1)}`;
-    } else if (res.landmarks.type === 'dbl') {
-      const idxs = [pts.low1, pts.neck, pts.low2];
-      idxs.forEach(idx => { if(res.data[idx]) highlightData.push({ time: res.data[idx].time, value: res.data[idx].close }); });
-      document.getElementById('chartStatus').innerHTML = `Detected <b>Double Bottom</b> support cluster`;
-    } else if (res.landmarks.type === 'ipo') {
-      highlightData.push({ time: res.data[pts.peak].time, value: res.data[pts.peak].close });
-      highlightData.push({ time: res.data[pts.base_low].time, value: res.data[pts.base_low].close });
-      document.getElementById('chartStatus').innerHTML = `Detected <b>Post-IPO Consolidation</b> zone`;
-    } else if (res.landmarks.type === 'flat') {
-      for(let i=pts.start; i<res.data.length; i++) {
-        highlightData.push({ time: res.data[i].time, value: pts.top });
-      }
-      document.getElementById('chartStatus').innerHTML = `Detected <b>Tight Flat Base</b> consolidation`;
+    const res = await fetch(`${API}/api/chart/${encodeURIComponent(symbol)}?strategy=${strategy}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    if (!json.data || json.data.length === 0) throw new Error('No OHLCV data returned');
+
+    // Sort by time ascending
+    const ohlcv = json.data.sort((a, b) => a.time - b.time);
+
+    // Feed candles
+    candleSeries.setData(ohlcv.map(d => ({
+      time: d.time,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+    })));
+
+    // Feed volume with color
+    volSeries.setData(ohlcv.map(d => ({
+      time: d.time,
+      value: d.value,
+      color: d.close >= d.open ? 'rgba(0,255,136,0.18)' : 'rgba(255,51,102,0.18)',
+    })));
+
+    // Draw pattern annotation line
+    const pts = json.landmarks && json.landmarks.points ? json.landmarks.points : null;
+    const type = json.landmarks ? json.landmarks.type : null;
+    const lineData = computePatternLine(ohlcv, type, pts);
+    patternLineSeries.setData(lineData);
+
+    // Add price lines for entry/target/stop if available
+    if (json.levels) {
+      candleSeries.createPriceLine({ price: json.levels.entry, color: '#00d9ff', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, title: 'Entry' });
+      candleSeries.createPriceLine({ price: json.levels.target, color: '#00ff88', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, title: 'Target' });
+      candleSeries.createPriceLine({ price: json.levels.stop, color: '#ff3366', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, title: 'Stop' });
     }
-    
-    annotationSeries.setData(highlightData);
+
     chart.timeScale().fitContent();
 
-    // Scroll to chart
-    document.getElementById('chartSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Build status message
+    const statusMsg = buildStatusMsg(type, pts, ohlcv);
+    document.getElementById('chartStatus').innerHTML = statusMsg;
+    document.getElementById('patternLegend').style.display = 'flex';
 
-  } catch (e) {
-    document.getElementById('chartStatus').innerHTML = `<span style="color:var(--red)">System Error: ${e.message}</span>`;
+    overlay.classList.add('hidden');
+
+  } catch (err) {
+    console.error('Chart load error:', err);
+    overlay.classList.remove('hidden');
+    overlayText.textContent = 'Chart unavailable: ' + err.message;
+    document.getElementById('chartStatus').innerHTML = `<span style="color:var(--red)">&#9888; ${err.message}</span>`;
   }
 }
 
-/* --- UI Helpers --- */
-const showStatus = (msg, dot='dotA', active=true) => {
-  const d = document.getElementById(dot);
-  if(d) d.className = active ? 'dot active' : 'dot';
-  if(dot==='dotA') document.getElementById('coreStatus').textContent = msg;
-};
+function computePatternLine(ohlcv, type, pts) {
+  if (!pts || ohlcv.length === 0) return [];
+  const safe = idx => idx >= 0 && idx < ohlcv.length;
+  const pt = (idx) => ({ time: ohlcv[idx].time, value: ohlcv[idx].close });
 
-/* --- Polling --- */
-async function sync() {
-  let failCount = 0;
-  while(true) {
-    try {
-      const r = await fetch(API+'/api/status');
-      const st = await r.json();
-      if(st.ready) {
-        serverReady = true;
-        showStatus('Verified', 'dotA', true);
-        document.getElementById('runBtn').disabled = false;
-        document.getElementById('scanInfo').innerHTML = `Neural Cache Ready &middot; <b>${st.stocks_cached}</b> entities loaded`;
-      } else {
-        serverReady = false;
-        showStatus('Syncing', 'dotA', true);
-        document.getElementById('runBtn').disabled = true;
-        document.getElementById('scanInfo').innerHTML = `Pulling Data: <b>${st.stocks_cached || 0}</b> stocks ...`;
-      }
-      failCount = 0;
-    } catch(e) {
-      failCount++;
-      showStatus('Disconnected', 'dotA', false);
-      if(failCount > 3) document.getElementById('runBtn').disabled = true;
-    }
-    await new Promise(r => setTimeout(r, 4000));
-  }
-}
-
-/* --- Loader --- */
-async function boot() {
-  initChart();
   try {
-    const r = await fetch(API+'/api/strategies');
+    if (type === 'cup') {
+      // Draw the U-shaped cup: left_peak → bottom → right_peak
+      const indices = [];
+      if (safe(pts.left_peak)) indices.push(pt(pts.left_peak));
+      // Fill the curve between left_peak and bottom
+      const step1 = Math.floor((pts.bottom - pts.left_peak) / 3);
+      if (step1 > 0 && safe(pts.left_peak + step1)) indices.push(pt(pts.left_peak + step1));
+      if (safe(pts.bottom)) indices.push(pt(pts.bottom));
+      // Fill the curve between bottom and right_peak
+      const step2 = Math.floor((pts.right_peak - pts.bottom) / 3);
+      if (step2 > 0 && safe(pts.bottom + step2)) indices.push(pt(pts.bottom + step2));
+      if (safe(pts.right_peak)) indices.push(pt(pts.right_peak));
+      // Handle pullback
+      if (pts.handle_start && safe(pts.handle_start + 5)) {
+        const hi = pts.handle_start + 5;
+        const handleLow = Math.min(...ohlcv.slice(pts.handle_start, hi + 1).map(d => d.close));
+        indices.push({ time: ohlcv[Math.min(hi, ohlcv.length-1)].time, value: handleLow });
+      }
+      return indices.sort((a,b) => a.time - b.time);
+
+    } else if (type === 'dbl') {
+      // W shape: low1 → neck → low2
+      const indices = [];
+      if (safe(pts.low1)) indices.push(pt(pts.low1));
+      if (safe(pts.neck)) indices.push(pt(pts.neck));
+      if (safe(pts.low2)) indices.push(pt(pts.low2));
+      // project neckline to the right
+      if (safe(pts.low2) && safe(pts.neck)) {
+        const end = Math.min(ohlcv.length - 1, pts.low2 + 10);
+        indices.push({ time: ohlcv[end].time, value: ohlcv[pts.neck].close });
+      }
+      return indices.sort((a,b) => a.time - b.time);
+
+    } else if (type === 'ipo') {
+      const indices = [];
+      if (safe(pts.peak)) indices.push(pt(pts.peak));
+      if (safe(pts.base_low)) indices.push(pt(pts.base_low));
+      const end = ohlcv.length - 1;
+      indices.push({ time: ohlcv[end].time, value: ohlcv[end].close });
+      return indices.sort((a,b) => a.time - b.time);
+
+    } else if (type === 'flat') {
+      const start = pts.start >= 0 ? pts.start : 0;
+      const end = ohlcv.length - 1;
+      if (!safe(start)) return [];
+      return [
+        { time: ohlcv[start].time, value: pts.top },
+        { time: ohlcv[end].time, value: pts.top },
+      ];
+
+    } else if (type === 'mom') {
+      // Draw horizontal EMA lines as reference
+      if (ohlcv.length < 2) return [];
+      return [
+        { time: ohlcv[0].time, value: pts.ema20 },
+        { time: ohlcv[ohlcv.length-1].time, value: pts.ema20 },
+      ];
+    }
+  } catch (e) {
+    console.warn('Pattern line computation error:', e);
+  }
+  return [];
+}
+
+function buildStatusMsg(type, pts, ohlcv) {
+  const safe = idx => idx !== undefined && idx >= 0 && idx < ohlcv.length;
+  if (type === 'cup' && pts) {
+    const bottom = safe(pts.bottom) ? ohlcv[pts.bottom].close.toFixed(1) : '?';
+    return `<b>Cup &amp; Handle</b> — Rounded base at &#8377;${bottom} &middot; Handle pullback forming`;
+  } else if (type === 'dbl' && pts) {
+    const neck = safe(pts.neck) ? ohlcv[pts.neck].close.toFixed(1) : '?';
+    return `<b>Double Bottom</b> — Neckline resistance at &#8377;${neck} &middot; W-formation detected`;
+  } else if (type === 'ipo') {
+    return `<b>IPO Base</b> — Post-listing consolidation zone highlighted &middot; Watching for breakout`;
+  } else if (type === 'flat') {
+    const top = pts && pts.top ? pts.top.toFixed(1) : '?';
+    return `<b>Flat Base</b> — Tight consolidation ceiling at &#8377;${top} &middot; Range compression active`;
+  } else if (type === 'mom') {
+    return `<b>Momentum Breakout</b> — EMA trajectory computed &middot; Trend acceleration zone`;
+  }
+  return 'Formation landmarks computed';
+}
+
+/* ─────────────────────────── STATUS SYNC ─────────────────────────── */
+async function sync() {
+  let fails = 0;
+  while (true) {
+    try {
+      const r = await fetch(API + '/api/status');
+      const st = await r.json();
+      if (st.ready) {
+        document.getElementById('dotA').className = 'dot active';
+        document.getElementById('coreStatus').textContent = 'Verified';
+        document.getElementById('runBtn').disabled = false;
+        document.getElementById('scanInfo').innerHTML =
+          `Neural Cache Ready &middot; <b>${st.stocks_cached}</b> entities loaded`;
+      } else {
+        document.getElementById('dotA').className = 'dot';
+        document.getElementById('coreStatus').textContent = 'Syncing';
+        document.getElementById('runBtn').disabled = true;
+        document.getElementById('scanInfo').innerHTML =
+          `Pulling Data: <b>${st.stocks_cached || 0}</b> stocks cached...`;
+      }
+      fails = 0;
+    } catch {
+      fails++;
+      document.getElementById('dotA').className = 'dot';
+      document.getElementById('coreStatus').textContent = 'Offline';
+      if (fails > 3) document.getElementById('runBtn').disabled = true;
+    }
+    await sleep(4000);
+  }
+}
+
+/* ─────────────────────────── BOOT ─────────────────────────── */
+async function boot() {
+  try {
+    const r = await fetch(API + '/api/strategies');
+    if (!r.ok) throw new Error('strategies fetch failed');
     strategies = await r.json();
-    const el = document.getElementById('strategyList');
-    el.innerHTML = strategies.map(s => `
-      <div class="strat-card" data-id="${s.id}">
-        <div class="id">${s.rank}</div>
-        <div class="name">${s.name}</div>
+
+    const list = document.getElementById('strategyList');
+    list.innerHTML = strategies.map(s => `
+      <div class="strat-card" data-id="${s.id}" id="sc-${s.id}" role="button" tabindex="0">
+        <div class="sid">${s.rank}</div>
+        <div class="sname">${s.name}</div>
         <div class="strat-metrics">
           <span>Success: <b>${s.win}</b></span>
           <span>R/R: <b style="color:var(--blue)">${s.rr}</b></span>
@@ -548,147 +847,198 @@ async function boot() {
       </div>
     `).join('');
 
-    el.querySelectorAll('.strat-card').forEach(c => {
-      c.addEventListener('click', () => {
-        el.querySelectorAll('.strat-card').forEach(x => x.classList.remove('active'));
-        c.classList.add('active');
-        selectedStrategy = c.dataset.id;
-        const info = strategies.find(x => x.id === selectedStrategy);
-        document.getElementById('scanInfo').innerHTML = `Targeting: <b>${info.name}</b> &middot; Ready for injection`;
+    list.querySelectorAll('.strat-card').forEach(card => {
+      card.addEventListener('click', () => {
+        list.querySelectorAll('.strat-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        selectedStrategy = card.dataset.id;
+        const info = strategies.find(s => s.id === selectedStrategy);
+        document.getElementById('scanInfo').innerHTML =
+          `Targeting: <b>${info.name}</b> &middot; Ready for injection`;
+      });
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
       });
     });
-  } catch(e) {
-    console.error("Boot error", e);
+  } catch (e) {
+    console.error('Boot error:', e);
+    document.getElementById('strategyList').innerHTML =
+      `<div style="color:var(--red);font-size:12px;font-family:'JetBrains Mono',monospace;">Strategies load failed. Reload page.</div>`;
   }
 }
 
-function formatPrice(p) {
-  return '&#x20B9;' + Number(p).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-}
-
-/* --- Execute --- */
+/* ─────────────────────────── SCAN ─────────────────────────── */
 async function run() {
-  if(!selectedStrategy) {
-    alert("Please select a Heuristic Profile first.");
+  if (!selectedStrategy) {
+    alert('Select a Heuristic Profile first.');
     return;
   }
   const btn = document.getElementById('runBtn');
-  const resultsEl = document.getElementById('results');
-  
   btn.disabled = true;
-  const oldText = btn.innerHTML;
-  btn.innerHTML = 'Executing...';
+  const orig = btn.textContent;
+  btn.textContent = 'Executing...';
+
+  document.getElementById('results').innerHTML =
+    `<div class="loading-state"><div class="orbit"></div><div class="tagline">Extracting entities...</div></div>`;
 
   const payload = {
     strategy: selectedStrategy,
     cap: document.getElementById('fCap').value,
     sector: document.getElementById('fSector').value,
-    min_score: parseInt(document.getElementById('fScore').value),
+    min_score: parseInt(document.getElementById('fScore').value, 10),
     trend: document.getElementById('fTrend').value,
   };
 
-  resultsEl.innerHTML = `<div class="loading-state"><div class="orbit"></div><div class="tagline">Extracting Entites...</div></div>`;
-
   try {
-    const r = await fetch(API+'/api/scan', {
+    const r = await fetch(API + '/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
     const data = await r.json();
-    render(data);
-  } catch(e) {
-    resultsEl.innerHTML = `<div class="empty-state" style="border-color:var(--red)"><div class="empty-icon">!</div><div class="empty-text">Sequence Interrupted: ${e.message}</div></div>`;
+    currentScanStrategy = selectedStrategy;
+    renderResults(data);
+  } catch (e) {
+    document.getElementById('results').innerHTML =
+      `<div class="empty-state" style="border-color:var(--red)">
+         <div class="empty-icon" style="color:var(--red)">!</div>
+         <div class="empty-title">Scan Failed</div>
+         <div class="empty-text">${e.message}</div>
+       </div>`;
   } finally {
     btn.disabled = false;
-    btn.innerHTML = oldText;
+    btn.textContent = orig;
   }
 }
 
-function render(data) {
+/* ─────────────────────────── RENDER ─────────────────────────── */
+function fmtPrice(p) {
+  return '&#8377;' + Number(p).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 1 });
+}
+
+function renderResults(data) {
   const container = document.getElementById('results');
-  if(data.count === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">!</div><div class="empty-text">Zero matches found in current market state. Refine heuristic parameters.</div></div>`;
+
+  if (!data.results || data.results.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#9680;</div>
+        <div class="empty-title">No Matches</div>
+        <div class="empty-text">No entities matched the current filter configuration. Try lowering the intelligence grade or changing sector.</div>
+      </div>`;
     return;
   }
 
   container.innerHTML = data.results.map((s, i) => {
-    const isUp = s.change_pct >= 0;
-    const isBull = s.trend === 'bullish';
+    const up = s.change_pct >= 0;
+    const bull = s.trend === 'bullish';
     return `
-      <div class="card" style="animation-delay: ${i * 0.08}s" onclick="loadChart('${s.symbol}', '${data.strategy}')">
-        <div class="card-top">
-          <div class="ticker-box">
-            <div class="sym">${s.symbol}</div>
-            <div class="comp">${s.company}</div>
-          </div>
-          <div class="val-box">
-            <div class="cur-price">${formatPrice(s.price)}</div>
-            <div class="cur-chg ${isUp ? 'pos' : 'neg'}">${isUp ? '&blacktriangle;' : '&blacktriangledown;'} ${s.change_pct.toFixed(2)}%</div>
-          </div>
+    <div class="card" data-symbol="${s.symbol}" style="animation-delay:${i * 0.07}s"
+         onclick="loadChart('${s.symbol}','${data.strategy}')" role="button" tabindex="0">
+      <div class="card-top">
+        <div class="ticker-box">
+          <div class="sym">${s.symbol}</div>
+          <div class="comp">${s.company}</div>
         </div>
-
-        <div class="badge-row">
-          <div class="badge strat">${s.strategy_meta.name}</div>
-          <div class="badge sector">${s.sector}</div>
-          <div class="badge">${s.cap}</div>
-        </div>
-
-        <div class="metric-grid">
-          <div class="met-item"><div class="met-label">Signal</div><div class="met-val ${s.rsi > 70 ? 'lo' : s.rsi > 50 ? 'hi' : ''}">${s.rsi} RSI</div></div>
-          <div class="met-item"><div class="met-label">Density</div><div class="met-val">${s.vol_ratio.toFixed(1)}x Vol</div></div>
-          <div class="met-item"><div class="met-label">Range</div><div class="met-val ${s.pct_from_52w_high > -5 ? 'hi' : ''}">${s.pct_from_52w_high.toFixed(1)}% Hi</div></div>
-          <div class="met-item"><div class="met-label">Momentum</div><div class="met-val ${s.macd_bull ? 'hi' : 'lo'}">${s.macd_bull ? 'Bull' : 'Bear'}</div></div>
-          <div class="met-item"><div class="met-label">Vector</div><div class="met-val ${isBull ? 'hi' : ''}">${s.trend.toUpperCase()}</div></div>
-          <div class="met-item"><div class="met-label">Edge</div><div class="met-val accent">${s.strategy_meta.rr}</div></div>
-        </div>
-
-        <div class="analyst-box">
-          <div class="analyst-label">Pattern Extraction Reasoning</div>
-          <ul class="reasoning-list">
-            ${s.reasoning.map(r => `<li>${r}</li>`).join('')}
-          </ul>
-        </div>
-
-        <div class="trade-footer">
-          <div class="trade-item"><div class="trade-label">Injection</div><div class="trade-val entry">${formatPrice(s.levels.entry)}</div></div>
-          <div class="trade-item"><div class="trade-label">Extraction</div><div class="trade-val target">${formatPrice(s.levels.target)}</div></div>
-          <div class="trade-item"><div class="trade-label">Eject</div><div class="trade-val stop">${formatPrice(s.levels.stop)}</div></div>
-        </div>
-
-        <div class="vitals-bar">
-          <div class="v-track"><div class="v-fill" style="width:${s.fit_score}%"></div></div>
-          <div class="v-score">${s.fit_score}/100</div>
+        <div class="val-box">
+          <div class="cur-price">${fmtPrice(s.price)}</div>
+          <div class="cur-chg ${up ? 'pos' : 'neg'}">${up ? '&#9650;' : '&#9660;'} ${Math.abs(s.change_pct).toFixed(2)}%</div>
         </div>
       </div>
-    `;
+
+      <div class="badge-row">
+        <div class="badge strat">${s.strategy_meta.name}</div>
+        <div class="badge sec">${s.sector}</div>
+        <div class="badge cap">${s.cap}</div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="met-item">
+          <div class="met-label">Signal</div>
+          <div class="met-val ${s.rsi > 70 ? 'lo' : s.rsi > 50 ? 'hi' : 'neu'}">${s.rsi} RSI</div>
+        </div>
+        <div class="met-item">
+          <div class="met-label">Density</div>
+          <div class="met-val neu">${s.vol_ratio.toFixed(1)}x Vol</div>
+        </div>
+        <div class="met-item">
+          <div class="met-label">Range</div>
+          <div class="met-val ${s.pct_from_52w_high > -5 ? 'hi' : 'neu'}">${s.pct_from_52w_high.toFixed(1)}% Hi</div>
+        </div>
+        <div class="met-item">
+          <div class="met-label">Momentum</div>
+          <div class="met-val ${s.macd_bull ? 'hi' : 'lo'}">${s.macd_bull ? 'Bull' : 'Bear'}</div>
+        </div>
+        <div class="met-item">
+          <div class="met-label">Vector</div>
+          <div class="met-val ${bull ? 'hi' : 'neu'}">${s.trend.toUpperCase()}</div>
+        </div>
+        <div class="met-item">
+          <div class="met-label">Edge RR</div>
+          <div class="met-val" style="color:var(--gold)">${s.strategy_meta.rr}x</div>
+        </div>
+      </div>
+
+      <div class="analyst-box">
+        <div class="analyst-label">Pattern Extraction Reasoning</div>
+        <ul class="reasoning-list">
+          ${s.reasoning.map(r => `<li>${r}</li>`).join('')}
+        </ul>
+      </div>
+
+      <div class="trade-footer">
+        <div class="trade-item">
+          <div class="trade-label">Entry (Inject)</div>
+          <div class="trade-val tv-entry">${fmtPrice(s.levels.entry)}</div>
+        </div>
+        <div class="trade-item">
+          <div class="trade-label">Target (Extract)</div>
+          <div class="trade-val tv-target">${fmtPrice(s.levels.target)}</div>
+        </div>
+        <div class="trade-item">
+          <div class="trade-label">Stop (Eject)</div>
+          <div class="trade-val tv-stop">${fmtPrice(s.levels.stop)}</div>
+        </div>
+      </div>
+
+      <div class="vitals-bar">
+        <div class="v-track"><div class="v-fill" style="width:${s.fit_score}%"></div></div>
+        <div class="v-score">${s.fit_score}/100</div>
+      </div>
+    </div>`;
   }).join('');
 
-  // Auto-load first chart
+  // Auto-load chart for first result
   if (data.results.length > 0) {
     loadChart(data.results[0].symbol, data.strategy);
   }
 }
 
-/* --- System --- */
+/* ─────────────────────────── CLOCK ─────────────────────────── */
 function tick() {
   const now = new Date();
-  document.getElementById('clock').textContent = now.toTimeString().split(' ')[0];
-  const day = now.getDay(); const m = now.getHours()*60 + now.getMinutes();
-  const open = day >= 1 && day <= 5 && m >= 555 && m <= 930;
-  const ms = document.getElementById('marketStatus');
-  ms.textContent = open ? 'Active' : 'Standby';
-  ms.style.color = open ? 'var(--green)' : 'var(--red)';
+  document.getElementById('clock').textContent = now.toTimeString().slice(0, 8);
+  const d = now.getDay(), m = now.getHours() * 60 + now.getMinutes();
+  const open = d >= 1 && d <= 5 && m >= 555 && m <= 930;
+  const el = document.getElementById('marketStatus');
+  el.textContent = open ? 'Active' : 'Standby';
+  el.style.color = open ? 'var(--green)' : 'var(--red)';
   document.getElementById('dotM').className = open ? 'dot active' : 'dot';
 }
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ─────────────────────────── INIT ─────────────────────────── */
 document.getElementById('runBtn').addEventListener('click', run);
 document.getElementById('resetBtn').addEventListener('click', () => location.reload());
 setInterval(tick, 1000);
+tick();
 boot();
 sync();
-tick();
-
 </script>
 </body>
 </html>
