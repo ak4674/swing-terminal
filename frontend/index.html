@@ -1,12 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SWING // Live NSE Pattern Terminal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <style>
   :root {
     --bg: #050506;
@@ -155,6 +147,16 @@
   .scan-info { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.1em; }
   .scan-info b { color: var(--accent); }
 
+  /* --- Chart Section --- */
+  .chart-section {
+    margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);
+    display: none; flex-direction: column; gap: 16px;
+  }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; }
+  .chart-title { font-size: 20px; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 12px; }
+  .chart-tag { background: var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+  #chart-container { width: 100%; height: 400px; background: #000; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+
   /* --- Results Cards --- */
   #results {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 24px;
@@ -171,6 +173,7 @@
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex; flex-direction: column; gap: 20px;
     animation: cardEntry 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    cursor: pointer;
   }
   @keyframes cardEntry { from { opacity: 0; transform: translateY(30px) rotateX(-5deg); filter: blur(10px); } to { opacity: 1; transform: translateY(0); filter: none; } }
   
@@ -180,6 +183,7 @@
     box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8), 0 0 20px var(--accent-glow);
     z-index: 10;
   }
+  .card.active { border-color: var(--accent); box-shadow: 0 0 25px var(--accent-glow); }
 
   .card-top { display: flex; justify-content: space-between; align-items: start; }
   .ticker-box { display: flex; flex-direction: column; gap: 4px; }
@@ -355,6 +359,14 @@
           </button>
         </div>
       </div>
+
+      <div class="chart-section" id="chartSection">
+        <div class="chart-header">
+          <div class="chart-title" id="chartTitle">SYSTEM::READY <span class="chart-tag">STANDBY</span></div>
+          <div class="tagline" id="chartStatus">Select entity to visualize formation</div>
+        </div>
+        <div id="chart-container"></div>
+      </div>
     </div>
   </div>
 
@@ -386,6 +398,102 @@ const API = '';
 let selectedStrategy = null;
 let strategies = [];
 let serverReady = false;
+let chart = null;
+let candleSeries = null;
+let volumeSeries = null;
+let annotationSeries = null;
+
+/* --- Charting Engine --- */
+function initChart() {
+  const container = document.getElementById('chart-container');
+  chart = LightweightCharts.createChart(container, {
+    layout: {
+      backgroundColor: '#000000',
+      textColor: '#8a8a95',
+      fontSize: 10,
+      fontFamily: 'JetBrains Mono',
+    },
+    grid: {
+      vertLines: { color: '#1a1a22' },
+      horzLines: { color: '#1a1a22' },
+    },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#1a1a22', scaleMargins: { top: 0.1, bottom: 0.2 } },
+    timeScale: { borderColor: '#1a1a22', timeVisible: true, secondsVisible: false },
+  });
+
+  candleSeries = chart.addCandlestickSeries({
+    upColor: '#00ff88', downColor: '#ff3366', borderVisible: false,
+    wickUpColor: '#00ff88', wickDownColor: '#ff3366'
+  });
+
+  volumeSeries = chart.addHistogramSeries({
+    color: '#1a1a22', priceFormat: { type: 'volume' },
+    priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }
+  });
+
+  annotationSeries = chart.addLineSeries({
+    color: '#d4ff3a', lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Dashed,
+    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false
+  });
+
+  new ResizeObserver(entries => {
+    if (entries[0].contentRect) {
+      chart.applyOptions({ width: entries[0].contentRect.width, height: 400 });
+    }
+  }).observe(container);
+}
+
+async function loadChart(symbol, strategy) {
+  document.getElementById('chartSection').style.display = 'flex';
+  document.getElementById('chartTitle').innerHTML = `${symbol} <span class="chart-tag">PATTERN ANALYZER</span>`;
+  document.getElementById('chartStatus').textContent = `Calculating ${strategy.toUpperCase()} formation landmarks...`;
+  
+  // Update active card
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+  const activeCard = Array.from(document.querySelectorAll('.card')).find(c => c.querySelector('.sym').textContent === symbol);
+  if(activeCard) activeCard.classList.add('active');
+
+  try {
+    const r = await fetch(API + `/api/chart/${symbol}?strategy=${strategy}`);
+    const res = await r.json();
+    
+    candleSeries.setData(res.data);
+    volumeSeries.setData(res.data.map(d => ({ time: d.time, value: d.value, color: d.close > d.open ? 'rgba(0,255,136,0.1)' : 'rgba(255,51,102,0.1)' })));
+    
+    // Draw Landmarks
+    const pts = res.landmarks.points;
+    const highlightData = [];
+    
+    if (res.landmarks.type === 'cup') {
+      const idxs = [pts.left_peak, pts.bottom, pts.right_peak];
+      idxs.forEach(idx => { if(res.data[idx]) highlightData.push({ time: res.data[idx].time, value: res.data[idx].close }); });
+      document.getElementById('chartStatus').innerHTML = `Detected <b>Rounded Base</b> formation at ${res.data[pts.bottom].close.toFixed(1)}`;
+    } else if (res.landmarks.type === 'dbl') {
+      const idxs = [pts.low1, pts.neck, pts.low2];
+      idxs.forEach(idx => { if(res.data[idx]) highlightData.push({ time: res.data[idx].time, value: res.data[idx].close }); });
+      document.getElementById('chartStatus').innerHTML = `Detected <b>Double Bottom</b> support cluster`;
+    } else if (res.landmarks.type === 'ipo') {
+      highlightData.push({ time: res.data[pts.peak].time, value: res.data[pts.peak].close });
+      highlightData.push({ time: res.data[pts.base_low].time, value: res.data[pts.base_low].close });
+      document.getElementById('chartStatus').innerHTML = `Detected <b>Post-IPO Consolidation</b> zone`;
+    } else if (res.landmarks.type === 'flat') {
+      for(let i=pts.start; i<res.data.length; i++) {
+        highlightData.push({ time: res.data[i].time, value: pts.top });
+      }
+      document.getElementById('chartStatus').innerHTML = `Detected <b>Tight Flat Base</b> consolidation`;
+    }
+    
+    annotationSeries.setData(highlightData);
+    chart.timeScale().fitContent();
+
+    // Scroll to chart
+    document.getElementById('chartSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  } catch (e) {
+    document.getElementById('chartStatus').innerHTML = `<span style="color:var(--red)">System Error: ${e.message}</span>`;
+  }
+}
 
 /* --- UI Helpers --- */
 const showStatus = (msg, dot='dotA', active=true) => {
@@ -424,6 +532,7 @@ async function sync() {
 
 /* --- Loader --- */
 async function boot() {
+  initChart();
   try {
     const r = await fetch(API+'/api/strategies');
     strategies = await r.json();
@@ -507,7 +616,7 @@ function render(data) {
     const isUp = s.change_pct >= 0;
     const isBull = s.trend === 'bullish';
     return `
-      <div class="card" style="animation-delay: ${i * 0.08}s">
+      <div class="card" style="animation-delay: ${i * 0.08}s" onclick="loadChart('${s.symbol}', '${data.strategy}')">
         <div class="card-top">
           <div class="ticker-box">
             <div class="sym">${s.symbol}</div>
@@ -554,6 +663,11 @@ function render(data) {
       </div>
     `;
   }).join('');
+
+  // Auto-load first chart
+  if (data.results.length > 0) {
+    loadChart(data.results[0].symbol, data.strategy);
+  }
 }
 
 /* --- System --- */

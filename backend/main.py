@@ -570,6 +570,47 @@ def build_reasoning(s: dict, sid: str) -> List[str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# PATTERN LANDMARKS (FOR CHARTS)
+# ─────────────────────────────────────────────────────────────────────────────
+def get_landmarks_cup(c, v) -> dict:
+    if len(c) < 40: return {}
+    win = c[-40:]; lo_idx = int(np.argmin(win))
+    lo = win[lo_idx]; lp = max(win[:lo_idx]); rp = max(win[lo_idx:])
+    # Find indices in the full closes list
+    full_len = len(c)
+    lpi = full_len - 40 + win[:lo_idx].index(lp)
+    rpi = full_len - 40 + lo_idx + win[lo_idx:].index(rp)
+    hoi = full_len - 40 + lo_idx
+    return {"type": "cup", "points": {"left_peak": lpi, "bottom": hoi, "right_peak": rpi, "handle_start": rpi}}
+
+def get_landmarks_dbl(c, v) -> dict:
+    if len(c) < 30: return {}
+    mid = len(c) // 2
+    win = c[-30:]; mid_rel = len(win) // 2
+    lo1 = min(win[:mid_rel]); lo2 = min(win[mid_rel:])
+    l1i = len(c) - 30 + win[:mid_rel].index(lo1)
+    l2i = len(c) - 30 + mid_rel + win[mid_rel:].index(lo2)
+    neck = max(win[mid_rel-5:mid_rel+5]) if mid_rel >= 5 else max(win)
+    ni = len(c) - 30 + win.index(neck)
+    return {"type": "dbl", "points": {"low1": l1i, "neck": ni, "low2": l2i}}
+
+def get_landmarks_ipo(c, listing_age) -> dict:
+    win = c[-25:] if len(c) >= 25 else c
+    pk = max(win); lo = min(win)
+    pki = len(c) - len(win) + win.index(pk)
+    loi = len(c) - len(win) + win.index(lo)
+    return {"type": "ipo", "points": {"peak": pki, "base_low": loi}}
+
+def get_landmarks_mom(c, v) -> dict:
+    e20 = ema_val(c, 20); e50 = ema_val(c, 50)
+    return {"type": "mom", "points": {"ema20": e20, "ema50": e50}}
+
+def get_landmarks_flat(c, v) -> dict:
+    win = c[-25:]; pk = max(win); lo = min(win)
+    si = len(c) - 25
+    return {"type": "flat", "points": {"start": si, "top": pk, "bottom": lo}}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FASTAPI
 # ─────────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="SWING Terminal", version="4.0")
@@ -611,6 +652,53 @@ async def strategies():
         {"id": "mom",  "rank": "S-04", "name": "Momentum Breakout", "win": "60–80%", "avg": "10–18%", "rr": 2.5},
         {"id": "flat", "rank": "S-05", "name": "Flat Base",         "win": "60–70%", "avg": "8–14%",  "rr": 1.8},
     ]
+
+
+@app.get("/api/chart/{symbol}")
+async def get_chart_data(symbol: str, strategy: str = "cup"):
+    # Find in universe to get listing age or default to 5000
+    age = 5000
+    for s in UNIVERSE:
+        if s[1] == symbol:
+            age = s[5]
+            break
+            
+    df = fetch_ohlcv_yahoo(symbol + ".NS" if not symbol.endswith(".NS") else symbol)
+    if df is None:
+        df = fetch_ohlcv_stooq(symbol + ".NS" if not symbol.endswith(".NS") else symbol)
+        
+    if df is None:
+        raise HTTPException(404, "Chart data not found")
+        
+    closes = df["Close"].tolist()
+    volumes = df["Volume"].tolist()
+    
+    # Get landmarks
+    landmarks = {}
+    if strategy == "cup": landmarks = get_landmarks_cup(closes, volumes)
+    elif strategy == "dbl": landmarks = get_landmarks_dbl(closes, volumes)
+    elif strategy == "ipo": landmarks = get_landmarks_ipo(closes, age)
+    elif strategy == "mom": landmarks = get_landmarks_mom(closes, volumes)
+    elif strategy == "flat": landmarks = get_landmarks_flat(closes, volumes)
+    
+    # Format for TradingView Lightweight Charts
+    data = []
+    for ts, row in df.iterrows():
+        data.append({
+            "time": int(ts.timestamp()),
+            "open": float(row["Open"]),
+            "high": float(row["High"]),
+            "low": float(row["Low"]),
+            "close": float(row["Close"]),
+            "value": float(row["Volume"]) # For volume series
+        })
+        
+    return json_safe({
+        "symbol": symbol,
+        "strategy": strategy,
+        "landmarks": landmarks,
+        "data": data
+    })
 
 
 class ScanParams(BaseModel):
@@ -660,3 +748,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=False)
+
