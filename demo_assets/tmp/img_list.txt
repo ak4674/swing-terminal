@@ -1,0 +1,13 @@
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517273807.png'
+duration 7
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517280483.png'
+duration 7
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517283951.png'
+duration 7
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517292513.png'
+duration 7
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517296979.png'
+duration 7
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517299808.png'
+duration 7
+file 'C:/Users/akyan/.gemini/antigravity/brain/74eca8e6-ac3d-482d-a609-006d6c0e2b6f/.system_generated/click_feedback/click_feedback_1776517299808.png'
